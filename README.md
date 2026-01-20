@@ -2,7 +2,7 @@
 
 An Obsidian plugin powered by Rust/WebAssembly that uses local LLMs to intelligently organize your notes with semantic embeddings, AI-powered link suggestions, contextual chat, and smart formatting tools.
 
-M
+Development included the use of LLMs. 
 
 ## Features
 
