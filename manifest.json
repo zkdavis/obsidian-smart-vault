@@ -1,0 +1,11 @@
+{
+  "id": "smart-vault-organizer",
+  "name": "Smart Vault Organizer",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "AI-powered vault organizer with embeddings and intelligent link suggestions using local LLMs",
+  "author": "ZKDavis",
+  "authorUrl": "https://github.com/zkdavis/obsidian-smart-vault",
+  "fundingUrl": "https://github.com/sponsors/zkdavis",
+  "isDesktopOnly": false
+}

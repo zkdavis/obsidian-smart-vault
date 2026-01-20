@@ -1,0 +1,38 @@
+{
+  "name": "obsidian-smart-vault",
+  "version": "1.0.0",
+  "description": "Smart vault organizer with embeddings and intelligent link suggestions",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "npm run build:wasm && npm run build:plugin && npm run deploy",
+    "build:wasm": "wasm-pack build --target web --out-dir pkg",
+    "build:plugin": "node esbuild.config.mjs production",
+    "deploy": "node deploy.mjs",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "wasm",
+    "rust",
+    "embeddings",
+    "ai"
+  ],
+  "author": "ZKDavis",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "builtin-modules": "^3.3.0",
+    "dotenv": "^17.2.3",
+    "esbuild": "0.19.8",
+    "obsidian": "latest",
+    "tslib": "2.6.2",
+    "typescript": "5.3.2"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^5.4.530"
+  }
+}

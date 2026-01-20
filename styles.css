@@ -1,0 +1,720 @@
+.smart-vault-suggestions {
+    padding: 16px;
+}
+
+.suggestion-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.suggestion-panel-header h4 {
+    margin: 0;
+}
+
+.suggestion-panel-header button {
+    font-size: 0.9em;
+    padding: 4px 8px;
+}
+
+.suggestion-header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.smart-vault-mini-btn {
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+    min-width: 32px;
+    height: 28px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px !important;
+    transition: all 0.2s ease;
+}
+
+.suggestion-mini-btn.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.smart-vault-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 12px;
+}
+
+.smart-vault-suggestion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.smart-vault-suggestion-item {
+    padding: 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: var(--background-primary);
+    transition: all 0.2s ease;
+}
+
+.smart-vault-suggestion-item:hover {
+    background-color: var(--background-secondary);
+    border-color: var(--interactive-accent);
+}
+
+.suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.similarity-score {
+    color: var(--text-accent);
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.suggestion-context {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.suggestion-llm-reason {
+    color: var(--text-accent);
+    font-size: 0.88em;
+    margin: 6px 0;
+    padding: 6px 10px;
+    background-color: var(--background-secondary);
+    border-left: 3px solid var(--interactive-accent);
+    border-radius: 3px;
+    line-height: 1.3;
+}
+
+.suggestion-button {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: opacity 0.2s ease;
+}
+
+.suggestion-button:hover {
+    opacity: 0.8;
+}
+
+.suggestion-title {
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.suggestion-path {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    display: block;
+    margin-top: 2px;
+}
+
+.suggestion-section {
+    margin-bottom: 24px;
+}
+
+.suggestion-section h5 {
+    margin: 12px 0 8px 0;
+    font-size: 1.1em;
+    color: var(--text-normal);
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 4px;
+}
+
+.smart-vault-other-docs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.other-doc-item {
+    padding: 10px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.other-doc-item:hover {
+    background-color: var(--background-secondary);
+    border-color: var(--interactive-accent);
+}
+
+.other-doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.other-doc-title {
+    font-weight: 500;
+    color: var(--text-normal);
+}
+
+.other-doc-count {
+    color: var(--text-muted);
+    font-size: 0.85em;
+}
+
+.smart-vault-link-preview {
+    background-color: var(--text-selection);
+    border: 1px dashed var(--interactive-accent);
+}
+
+.smart-vault-llm-warning {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    background-color: rgba(255, 180, 0, 0.1);
+    border: 1px solid rgba(255, 180, 0, 0.3);
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.smart-vault-llm-warning .warning-text {
+    color: var(--text-warning, #ff8c00);
+}
+
+.embedding-only-divider {
+    display: flex;
+    align-items: center;
+    margin: 12px 0 8px 0;
+    padding: 6px 10px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    border-top: 1px dashed var(--background-modifier-border);
+    padding-top: 12px;
+}
+
+.embedding-only-divider span {
+    opacity: 0.8;
+}
+
+.smart-vault-llm-scanning {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background-color: rgba(100, 180, 255, 0.1);
+    border: 1px solid rgba(100, 180, 255, 0.3);
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: var(--text-accent);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Smart Vault Tab Interface */
+.smart-vault-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    user-select: text;
+}
+
+.smart-vault-tab-header {
+    display: flex;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.smart-vault-tab-btn {
+    flex: 1;
+    padding: 8px 4px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-radius: 0;
+}
+
+.smart-vault-tab-btn:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.smart-vault-tab-btn.active {
+    color: var(--text-normal);
+    border-bottom-color: var(--interactive-accent);
+    font-weight: 600;
+}
+
+.smart-vault-tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    position: relative;
+}
+
+/* Chat Tab Styles */
+.smart-vault-chat-tab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.smart-vault-chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chat-message {
+    padding: 10px 14px;
+    border-radius: 12px;
+    max-width: 85%;
+    font-size: 15px;
+    line-height: 1.6;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
+}
+
+.chat-message.user {
+    align-self: flex-end;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.chat-message.assistant {
+    align-self: flex-start;
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.chat-author {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-bottom: 2px;
+    font-weight: 600;
+}
+
+.smart-vault-chat-input-area {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.smart-vault-chat-input-area textarea {
+    flex: 1;
+    resize: none;
+    height: 40px;
+    /* compact */
+    min-height: 40px;
+    padding: 8px;
+    font-size: 13px;
+}
+
+.smart-vault-chat-input-area button {
+    height: 40px;
+}
+
+/* Formatting Tab Styles */
+.smart-vault-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.smart-vault-section:last-child {
+    border-bottom: none;
+}
+
+.smart-vault-correction {
+    color: var(--text-success);
+    font-weight: 600;
+}
+
+.smart-vault-reason {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-style: italic;
+}
+
+.tag-pill.new {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* Organization Tab Styles */
+.smart-vault-folder-suggestion {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--interactive-accent);
+    margin: 10px 0;
+}
+
+.smart-vault-helper-text {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.chat-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.chat-copy-btn {
+    background: transparent;
+    border: none;
+    padding: 2px;
+    height: 20px;
+    width: 20px;
+    opacity: 0.5;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.chat-copy-btn:hover {
+    opacity: 1;
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+    border-radius: 4px;
+}
+
+.chat-content.markdown-preview-view {
+    font-size: 14px;
+    padding: 0;
+}
+
+.chat-content.markdown-preview-view p {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+/* Formatting Tab Updates */
+.smart-vault-grammar-item {
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    list-style: none;
+    position: relative;
+    background-color: var(--background-primary);
+}
+
+.smart-vault-grammar-item:hover {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-secondary);
+}
+
+.smart-vault-original {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.smart-vault-correction {
+    color: var(--text-success);
+    font-weight: bold;
+}
+
+.smart-vault-reason {
+    font-size: 11px;
+    margin-top: 4px;
+    color: var(--text-muted);
+}
+
+.smart-vault-apply-btn {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    padding: 2px 8px;
+    height: 24px;
+    background-color: var(--background-modifier-border);
+}
+
+.smart-vault-apply-btn:hover {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* Organization Tab Persist check */
+.smart-vault-organization-tab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Tag Buttons */
+.smart-vault-tag-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 8px;
+    height: 24px;
+    background-color: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+}
+
+.smart-vault-tag-btn:hover {
+    border-color: var(--text-on-accent);
+    opacity: 0.9;
+}
+
+/* Consistent Button Theme */
+.smart-vault-mini-btn {
+    font-size: 12px;
+    padding: 4px 10px;
+    height: 28px;
+    background-color: var(--interactive-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    /* Standard Obsidian-like radius */
+    color: var(--text-normal);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.1s ease, border-color 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.smart-vault-mini-btn:hover {
+    background-color: var(--interactive-hover);
+    border-color: var(--background-modifier-border-hover);
+}
+
+.smart-vault-mini-btn.active {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+/* Specific Buttons */
+.smart-vault-new-chat-btn {
+    /* Make New Chat stand out slightly but adhere to theme */
+    border-color: var(--interactive-accent);
+    color: var(--text-accent);
+}
+
+.smart-vault-new-chat-btn:hover {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.smart-vault-history-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 2px;
+    width: 24px;
+}
+
+.smart-vault-history-delete-btn:hover {
+    color: var(--text-error);
+    background-color: var(--background-modifier-error-hover);
+}
+
+.smart-vault-history-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+/* Input Area Polish */
+.smart-vault-chat-input-area textarea {
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+}
+
+.smart-vault-chat-input-area textarea:focus {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+/* Toolbar & Controls */
+.smart-vault-toolbar {
+    padding: 10px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.smart-vault-toolbar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 8px;
+}
+
+.smart-vault-context-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 24px;
+}
+
+.smart-vault-mode-select {
+    margin-right: auto;
+    /* Push other items to right if needed, or just standard gap */
+    max-width: 140px;
+}
+
+/* Icon Buttons (History, Detach, etc) */
+.smart-vault-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    font-size: 16px;
+}
+
+.smart-vault-icon-btn:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.smart-vault-icon-btn.active {
+    color: var(--text-accent);
+    background-color: var(--interactive-accent-hover);
+    /* Subtle BG for active state if icon */
+}
+
+/* Specific button tweaks */
+.smart-vault-history-btn {
+    font-size: 18px;
+}
+
+.smart-vault-detach-btn {
+    font-size: 14px;
+    margin-left: 6px;
+}
+
+/* Context Header */
+.smart-vault-context-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+.smart-vault-context-title {
+    font-weight: 600;
+    color: var(--text-normal);
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.smart-vault-context-status {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.smart-vault-context-status.detached {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.smart-vault-structure-item {
+    padding: 6px;
+    border-bottom: 1px dashed var(--background-modifier-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.smart-vault-scroll-view {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 8px;
+    background-color: var(--background-primary-alt);
+}
+
+.smart-vault-flashcard-add-btn {
+    background-color: #8a2be2 !important;
+    /* BlueViolet/Purple */
+    color: white !important;
+    font-weight: 600;
+}
+
+.smart-vault-flashcard-add-btn:hover {
+    background-color: #9932cc !important;
+    /* DarkOrchid */
+    opacity: 1;
+}
+
+/* Scrollbar styling for panels */
+.smart-vault-scroll-view::-webkit-scrollbar {
+    width: 6px;
+}
+
+.smart-vault-scroll-view::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-bg);
+    border-radius: 3px;
+}

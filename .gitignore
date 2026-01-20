@@ -1,0 +1,45 @@
+# Rust
+/target
+# Cargo.lock
+
+# WASM
+/pkg
+*.wasm
+
+# Node
+node_modules/
+# package-lock.json
+# yarn.lock
+
+# Obsidian
+main.js
+*.js.map
+
+# Build artifacts
+/dist
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build logs
+*.log
+
+# Null device files
+nul
+
+# Build tool archives/extractions
+wasm-bindgen-*/
+wasm-pack-*/
+*.tar.gz
+
+# Development
+pro_cc.md
+.env
