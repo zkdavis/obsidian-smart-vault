@@ -23,6 +23,7 @@ export interface SmartVaultSettings {
     llmConcurrency: number;  // How many LLM requests to run in parallel
     useKeywordExtraction: boolean;  // Extract keywords for better cross-linking
     enableThinkingMode: boolean;  // Enable chain-of-thought reasoning for qwen3/deepseek models
+    enableHoverPreviews: boolean; // Enable live previews on hover (links, grammar)
     // Vision
     visionModel: string;
     handwrittenInbox: string;
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: SmartVaultSettings = {
     llmConcurrency: 3,  // Process 3 files in parallel
     useKeywordExtraction: true,  // Extract keywords for better cross-linking
     enableThinkingMode: false,  // Default off (enable for qwen3/deepseek models)
+    enableHoverPreviews: true,  // Default ON as requested
     // Vision defaults
     visionModel: 'ministral-3:3b',
     handwrittenInbox: 'Inbox/Handwritten',

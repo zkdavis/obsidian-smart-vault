@@ -17,7 +17,7 @@ Development included the use of LLMs.
 
 - **Context-Aware Q&A** - Ask questions about your current note
 - **RAG Integration** - Automatically retrieves relevant notes from your vault
-- **Agentic Tools** - Insert text, compare notes, summarize content
+- **Agentic Tools** - Execute actions: perform semantic comparisons, insert generated text directly into notes, summaries, and outlines
 
 ### Smart Formatting
 

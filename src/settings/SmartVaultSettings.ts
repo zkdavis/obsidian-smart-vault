@@ -298,6 +298,17 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
+            .setName('Enable Hover Previews')
+            .setDesc('Show live previews of suggestions on hover (for links, grammar, etc.). Default: On.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableHoverPreviews)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableHoverPreviews = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshEditors();
+                }));
+
+        new Setting(containerEl)
             .setName('Chat Temperature')
             .setDesc('Creativity for Chat (0.7+ recommended for natural conversation)')
             .addSlider(slider => slider

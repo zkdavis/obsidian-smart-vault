@@ -12,12 +12,14 @@ export class ChatTab extends BaseTab {
     private showContextSources: boolean = false;
     public showHistory: boolean = false; // History Toggle State
     private contextDetached: boolean = false;
+    private shouldFocusInput: boolean = false;
 
     constructor(app: App, plugin: SmartVaultPlugin, containerEl: HTMLElement) {
         super(app, plugin, containerEl);
     }
 
     async onOpen(): Promise<void> {
+        this.shouldFocusInput = true;
         this.render();
     }
 
@@ -33,15 +35,17 @@ export class ChatTab extends BaseTab {
             this.render();
 
             // Load history
-            this.plugin.cacheManager.loadChatHistory().then(history => {
-                const loaded = history[file.path];
-                if (loaded) {
-                    this.history = loaded;
-                    // If history exists, we might want to ensure mode consistency, or just default to vault
-                    if (this.history.length > 0) this.contextDetached = false;
-                    this.render();
-                }
-            });
+            if (this.plugin.cacheManager) {
+                this.plugin.cacheManager.loadChatHistory().then(history => {
+                    const loaded = history[file.path];
+                    if (loaded) {
+                        this.history = loaded;
+                        // If history exists, we might want to ensure mode consistency, or just default to vault
+                        if (this.history.length > 0) this.contextDetached = false;
+                        this.render();
+                    }
+                });
+            }
             this.contextDetached = false; // Reset detachment on file switch
             this.chatMode = 'vault';
             this.render();
@@ -55,7 +59,7 @@ export class ChatTab extends BaseTab {
         this.history = [];
 
         // Attempt to load history if single file context
-        if (files.length === 1) {
+        if (files.length === 1 && this.plugin.cacheManager) {
             this.plugin.cacheManager.loadChatHistory().then(history => {
                 const loaded = history[files[0].path];
                 if (loaded) {
@@ -145,6 +149,9 @@ export class ChatTab extends BaseTab {
     }
 
     async renderHistoryView(container: HTMLElement) {
+        // Null check for plugin/cacheManager
+        if (!this.plugin.cacheManager) return;
+
         const historyContainer = container.createDiv({ cls: 'smart-vault-history-view', attr: { style: 'padding: 10px; overflow-y: auto; flex-grow: 1;' } });
         historyContainer.createEl('h2', { text: 'Conversation History' });
 
@@ -182,7 +189,7 @@ export class ChatTab extends BaseTab {
 
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
-                if (confirm(`Delete chat history for ${filePath}?`)) {
+                if (confirm(`Delete chat history for ${filePath}?`) && this.plugin.cacheManager) {
                     await this.plugin.cacheManager.deleteChatHistory(filePath);
                     this.renderHistoryView(container); // Re-render
                 }
@@ -265,7 +272,12 @@ export class ChatTab extends BaseTab {
                 handleSend();
             }
         };
-        setTimeout(() => input.focus(), 50);
+        if (this.shouldFocusInput) {
+            setTimeout(() => {
+                input.focus();
+                this.shouldFocusInput = false;
+            }, 50);
+        }
     }
 
     public async runQuery(query: string) {
@@ -423,7 +435,7 @@ export class ChatTab extends BaseTab {
 
             // Save History
             const fileToSave = this.currentFile;
-            if (fileToSave) {
+            if (fileToSave && this.plugin.cacheManager) {
                 const history = await this.plugin.cacheManager.loadChatHistory();
                 history[fileToSave.path] = this.history;
                 await this.plugin.cacheManager.saveChatHistory(history);
@@ -561,11 +573,17 @@ export class ChatTab extends BaseTab {
         if (!match || !match[1]) return "";
 
         const topic = match[1].trim();
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+        if (!this.currentFile) {
+            return "SYSTEM ERROR: No active file context. Please select a note first.";
+        }
+
+        const view = this.getActiveEditor(this.currentFile);
 
         if (!view) {
-            return "SYSTEM ERROR: No active Markdown file found to insert text into. Please open a note first.";
+            return "SYSTEM ERROR: Could not find active editor for current file. Please open the note.";
         }
+
 
         try {
             // Generate content
@@ -752,10 +770,19 @@ Analyze the content of these two notes. Identify:
     // --- End Tools ---
 
     private getActiveEditor(file: TFile): MarkdownView | null {
+        // Strategy 1: Active View
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view && view.file && view.file.path === file.path) {
             return view;
         }
-        return null;
+
+        // Strategy 2: Find ANY leaf with this file open
+        let foundView: MarkdownView | null = null;
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (!foundView && leaf.view instanceof MarkdownView && leaf.view.file && leaf.view.file.path === file.path) {
+                foundView = leaf.view;
+            }
+        });
+        return foundView;
     }
 }

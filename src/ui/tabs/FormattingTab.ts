@@ -67,26 +67,27 @@ export class FormattingTab extends BaseTab {
             return;
         }
 
+        const mtime = this.currentFile.stat.mtime;
+        const cacheKey = this.currentFile.path;
+
+        // CACHE CHECK (Optimized direct check)
+        const cached = this.plugin.settings.formattingCache?.[cacheKey];
+        if (cached && cached.mtime === mtime && cached.data) {
+            if (this.plugin.settings.debugMode) {
+                console.log(`[DEBUG] Cache hit for ${cacheKey}`);
+            }
+            this.lastAnalysis = cached.data;
+            this.lastAnalysisPath = cacheKey;
+            this.render();
+            return;
+        }
+
         this.isLoading = true;
         this.render(); // Update UI to "Loading" state
 
         try {
             const content = await this.app.vault.read(this.currentFile);
-            const mtime = this.currentFile.stat.mtime;
-            const cacheKey = this.currentFile.path;
 
-            // CACHE CHECK
-            const cached = this.plugin.settings.formattingCache?.[cacheKey];
-            if (cached && cached.mtime === mtime && cached.data) {
-                if (this.plugin.settings.debugMode) {
-                    console.log(`[DEBUG] Cache hit for ${cacheKey}`);
-                }
-                this.lastAnalysis = cached.data;
-                this.lastAnalysisPath = cacheKey;
-                this.render(); // Done!
-                this.isLoading = false;
-                return;
-            }
 
             // Get all tags from vault (simple implementation)
             // @ts-ignore - getAllTags is part of metadataCache
@@ -203,7 +204,11 @@ export class FormattingTab extends BaseTab {
                 const applyBtn = li.createEl('button', { text: 'Apply', cls: 'smart-vault-apply-btn' });
 
                 // Hover Effects
-                li.onmouseenter = () => this.highlightTextInEditor(issue.original);
+                li.onmouseenter = () => {
+                    if (this.plugin.settings.enableHoverPreviews) {
+                        this.highlightTextInEditor(issue.original);
+                    }
+                };
 
                 // Interaction
                 applyBtn.onclick = async () => {
@@ -240,6 +245,8 @@ export class FormattingTab extends BaseTab {
                 // Hover Preview (Live insertion)
                 // Hover Preview (Live insertion)
                 addBtn.onmouseenter = () => {
+                    if (!this.plugin.settings.enableHoverPreviews) return;
+
                     const view = this.getActiveEditor(file);
                     if (view) {
                         const editor = view.editor;

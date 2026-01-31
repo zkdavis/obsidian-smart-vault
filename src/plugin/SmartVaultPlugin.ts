@@ -9,6 +9,7 @@ import { VaultScanner } from './scanning/VaultScanner';
 import { HandwrittenNoteWatcher } from './scanning/HandwrittenNoteWatcher';
 import { LinkSuggestionView, VIEW_TYPE_LINK_SUGGESTIONS } from '../ui/LinkSuggestionView';
 import { InlineLinkSuggest } from '../suggest/InlineLinkSuggest';
+import { inlineSuggestionExtension } from '../editor/InlineSuggestionExtension';
 import { truncateContent } from '../utils/content';
 import { CONSTANTS } from '../constants';
 
@@ -70,6 +71,12 @@ export default class SmartVaultPlugin extends Plugin {
         this.handwrittenWatcher = new HandwrittenNoteWatcher(this);
         this.handwrittenWatcher.register();
 
+        // Initialize Handwritten Note Watcher
+        this.handwrittenWatcher = new HandwrittenNoteWatcher(this);
+        this.handwrittenWatcher.register();
+
+        this.registerEditorExtension(inlineSuggestionExtension(this.app, this));
+
         this.addRibbonIcon('brain', 'Smart Vault Suggestions', () => {
             this.activateSuggestionView();
         });
@@ -79,6 +86,8 @@ export default class SmartVaultPlugin extends Plugin {
             name: 'Scan vault for embeddings',
             callback: () => this.scanVault()
         });
+
+
 
         this.addCommand({
             id: 'complete-rescan',
@@ -134,6 +143,25 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         // Context Menu: "Chat with this note"
+        this.registerEvent(
+            this.app.workspace.on('editor-menu', (menu, editor, view) => {
+                const selection = editor.getSelection();
+                if (selection) {
+                    menu.addItem((item) => {
+                        item
+                            .setTitle('Smart Vault: Suggest Grammar Corrections')
+                            .setIcon('spell-check')
+                            .onClick(async () => {
+                                await this.activateSuggestionView();
+                                if (this.suggestionView) {
+                                    this.suggestionView.openChatWithAction([view.file!], `Correct the grammar of this text and explain the changes:\n\n"${selection}"`);
+                                }
+                            });
+                    });
+                }
+            })
+        );
+
         // Context Menu: "Chat with this note"
         this.registerEvent(
             this.app.workspace.on('file-menu', (menu, file) => {
@@ -170,6 +198,19 @@ export default class SmartVaultPlugin extends Plugin {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
                                     this.suggestionView.openChatWithAction([file], "Generate a structured outline of this note.");
+                                }
+                            });
+                    });
+                    menu.addItem((item) => {
+                        item
+                            .setTitle('Smart Vault: Transcribe PDF (Force)')
+                            .setIcon('file-audio')
+                            .onClick(async () => {
+                                if (file.extension === 'pdf' && this.handwrittenWatcher) {
+                                    new Notice(`Force transcribing ${file.basename}...`);
+                                    await this.handwrittenWatcher.forceTranscribe(file);
+                                } else {
+                                    new Notice(`Not a PDF or watcher not initialized.`);
                                 }
                             });
                     });
@@ -453,6 +494,18 @@ export default class SmartVaultPlugin extends Plugin {
 
     async saveEmbeddings() {
         return this.cacheManager!.saveEmbeddings();
+    }
+
+    refreshEditors() {
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (leaf.view instanceof MarkdownView && leaf.view.editor) {
+                // @ts-ignore
+                const editorView = leaf.view.editor.cm;
+                if (editorView) {
+                    editorView.dispatch({ effects: [] });
+                }
+            }
+        });
     }
 
     async clearEmbeddings() {

@@ -54,26 +54,26 @@ export class OrganizationTab extends BaseTab {
             return;
         }
 
+        const mtime = this.currentFile.stat.mtime;
+        const cacheKey = this.currentFile.path;
+
+        // CACHE CHECK (Optimized direct check)
+        const cached = this.plugin.settings.organizationCache?.[cacheKey];
+        if (cached && cached.mtime === mtime && cached.data) {
+            if (this.plugin.settings.debugMode) {
+                console.log(`[DEBUG] Cache hit for ${cacheKey}`);
+            }
+            this.lastResult = cached.data;
+            this.lastResultPath = cacheKey;
+            this.render();
+            return;
+        }
+
         this.isLoading = true;
         this.render();
 
         try {
             const content = await this.app.vault.read(this.currentFile);
-            const mtime = this.currentFile.stat.mtime;
-            const cacheKey = this.currentFile.path;
-
-            // CACHE CHECK
-            const cached = this.plugin.settings.organizationCache?.[cacheKey];
-            if (cached && cached.mtime === mtime && cached.data) {
-                if (this.plugin.settings.debugMode) {
-                    console.log(`[DEBUG] Cache hit for ${cacheKey}`);
-                }
-                this.lastResult = cached.data;
-                this.lastResultPath = cacheKey;
-                this.render();
-                this.isLoading = false;
-                return;
-            }
 
             const allFolders = this.app.vault.getAllLoadedFiles()
                 .filter(f => f instanceof TFolder)
@@ -138,10 +138,17 @@ export class OrganizationTab extends BaseTab {
 
             // CACHE WRITE
             if (!this.plugin.settings.organizationCache) this.plugin.settings.organizationCache = {};
-            this.plugin.settings.organizationCache[this.currentFile.path] = {
+
+            const cacheEntry = {
                 mtime: this.currentFile.stat.mtime,
                 data: result
             };
+            this.plugin.settings.organizationCache[this.currentFile.path] = cacheEntry;
+
+            if (this.plugin.settings.debugMode) {
+                console.log(`[DEBUG] Wrote to Organization Cache for ${this.currentFile.path}`, cacheEntry);
+            }
+
             await this.plugin.saveSettings();
 
         } catch (e) {
@@ -199,7 +206,7 @@ export class OrganizationTab extends BaseTab {
         const list = section.createDiv({ cls: 'smart-vault-scroll-view' });
 
         if (suggestions.length === 0) {
-            list.createDiv({ text: "No valid suggestions found.", style: "font-style: italic; color: var(--text-muted);" });
+            list.createDiv({ text: "No valid suggestions found.", attr: { style: "font-style: italic; color: var(--text-muted);" } });
             return;
         }
 
@@ -219,9 +226,9 @@ export class OrganizationTab extends BaseTab {
             moveBtn.onclick = async () => {
                 try {
                     const folderPath = candidate.folder;
-                    // Create folder if new
-                    if (candidate.is_new_path && !(await this.app.vault.adapter.exists(folderPath))) {
-                        await this.app.vault.createFolder(folderPath);
+                    // Create folder if new (recursive)
+                    if (candidate.is_new_path) {
+                        await this.ensureFolderExists(folderPath);
                     }
 
                     const newPath = `${folderPath}/${file.name}`;
@@ -234,5 +241,34 @@ export class OrganizationTab extends BaseTab {
                 }
             };
         });
+    }
+
+    private async ensureFolderExists(path: string) {
+        if (!path || path === '/') return;
+
+        // Strip leading/trailing slashes
+        const cleanPath = path.replace(/^\/+|\/+$/g, '');
+        const folders = cleanPath.split('/');
+        let currentPath = '';
+
+        for (const folder of folders) {
+            currentPath = currentPath === '' ? folder : `${currentPath}/${folder}`;
+
+            try {
+                // Check if it exists (using adapter to be safe with cache/disk mismatch)
+                const exists = await this.app.vault.adapter.exists(currentPath);
+                if (!exists) {
+                    await this.app.vault.createFolder(currentPath);
+                }
+            } catch (error: any) {
+                // Ignore "Folder already exists" errors, fail on others
+                if (error.message && error.message.includes("already exists")) {
+                    // benign
+                } else {
+                    console.error(`Failed to create folder ${currentPath}:`, error);
+                    throw error;
+                }
+            }
+        }
     }
 }

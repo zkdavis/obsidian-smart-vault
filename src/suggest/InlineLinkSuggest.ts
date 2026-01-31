@@ -16,6 +16,11 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
     }
 
     onTrigger(cursor: EditorPosition, editor: Editor, file: TFile): EditorSuggestTriggerInfo | null {
+        // Respect settings toggle (if we implement live preview later)
+        if (!this.plugin.settings.enableHoverPreviews) {
+            return null;
+        }
+
         const line = editor.getLine(cursor.line);
 
         // Only trigger when user types [[ for manual link insertion
@@ -41,8 +46,8 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
 
         // Check if we're in link context (starts with [[)
         const isLinkContext = context.query.startsWith('[[') ||
-                             (context.start.ch >= 2 &&
-                              context.editor.getLine(context.start.line).slice(context.start.ch - 2, context.start.ch) === '[[');
+            (context.start.ch >= 2 &&
+                context.editor.getLine(context.start.line).slice(context.start.ch - 2, context.start.ch) === '[[');
 
         try {
             // If query is too short, don't show suggestions
