@@ -1,6 +1,7 @@
 import { TAbstractFile, TFile, TFolder, Notice, Platform } from 'obsidian';
 import * as pdfjsLib from 'pdfjs-dist';
 import SmartVaultPlugin from '../SmartVaultPlugin';
+import pdfWorkerSource from '../../pdf.worker.min.workerjs';
 
 // Set worker source for PDF.js
 // We copied 'pdf.worker.min.js' to the plugin folder during build.
@@ -15,12 +16,13 @@ export class HandwrittenNoteWatcher {
     constructor(private plugin: SmartVaultPlugin) { }
 
     register() {
-        const workerPath = this.plugin.app.vault.adapter.getResourcePath(
-            `${this.plugin.manifest.dir}/pdf.worker.min.js`
-        );
+        // Initialize PDF.js worker from bundled source
+        const blob = new Blob([pdfWorkerSource], { type: 'application/javascript' });
+        const workerPath = URL.createObjectURL(blob);
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath;
         if (this.plugin.settings.debugMode) {
-            console.log(`[HandwrittenWatcher] Set PDF worker path: ${workerPath}`);
+            console.log(`[HandwrittenWatcher] Initialized PDF worker from bundled source`);
         }
 
         this.plugin.registerEvent(
@@ -137,10 +139,6 @@ export class HandwrittenNoteWatcher {
             let currentFile = file;
             const attachmentFolder = settings.handwrittenAttachmentsFolder || 'Attachments/Handwritten';
 
-            // Should we move it?
-            // If it's in the inbox, YES.
-            // If it's forced and NOT in inbox (e.g. user right clicked a file in root), MAYBE?
-            // Let's stick to the rule: processed files live in Attachment Folder.
 
             if (!currentFile.path.startsWith(attachmentFolder)) {
                 // Ensure folder exists

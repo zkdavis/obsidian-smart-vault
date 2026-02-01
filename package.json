@@ -1,6 +1,6 @@
 {
   "name": "obsidian-smart-vault",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Smart vault organizer with embeddings and intelligent link suggestions",
   "main": "main.js",
   "scripts": {

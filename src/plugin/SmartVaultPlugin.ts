@@ -12,6 +12,7 @@ import { InlineLinkSuggest } from '../suggest/InlineLinkSuggest';
 import { inlineSuggestionExtension } from '../editor/InlineSuggestionExtension';
 import { truncateContent } from '../utils/content';
 import { CONSTANTS } from '../constants';
+import wasmBinary from '../../pkg/obsidian_smart_vault_bg.wasm';
 
 /**
  * Main plugin class for Smart Vault Organizer.
@@ -363,16 +364,8 @@ export default class SmartVaultPlugin extends Plugin {
     async initializeWasm() {
         const wasmModule = await import('../../pkg/obsidian_smart_vault.js');
 
-        // Get the plugin directory path
-        const adapter = this.app.vault.adapter;
-        // @ts-ignore
-        const basePath = adapter.getBasePath ? adapter.getBasePath() : '';
-        const pluginDir = `${basePath}/.obsidian/plugins/smart-vault-organizer`;
-        const wasmPath = `${pluginDir}/pkg/obsidian_smart_vault_bg.wasm`;
-
-        // Load WASM file (use object parameter to avoid deprecation warning)
-        const wasmBytes = await adapter.readBinary(`${this.manifest.dir}/pkg/obsidian_smart_vault_bg.wasm`);
-        await wasmModule.default({ module_or_path: wasmBytes });
+        // Initialize WASM module using the bundled binary
+        await wasmModule.default({ module_or_path: wasmBinary });
         wasmModule.init();
 
         this.wasmModule = wasmModule;

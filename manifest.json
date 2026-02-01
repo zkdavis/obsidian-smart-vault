@@ -1,7 +1,7 @@
 {
 	"id": "smart-vault-organizer",
 	"name": "Smart Vault Organizer",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "1.5.0",
 	"description": "AI-powered vault organizer with embeddings and intelligent link suggestions using local LLMs",
 	"author": "ZKDavis",

@@ -3,15 +3,15 @@ import process from "process";
 import builtins from "builtin-modules";
 import fs from "fs";
 
-// Copy PDF.js worker to dist
+// Copy PDF.js worker to src for bundling
 try {
 	fs.copyFileSync(
 		'node_modules/pdfjs-dist/build/pdf.worker.min.mjs',
-		'pdf.worker.min.js'
+		'src/pdf.worker.min.workerjs'
 	);
-	console.log("Copied pdf.worker.min.js");
+	console.log("Prepared pdf.worker.min.workerjs for bundling");
 } catch (e) {
-	console.error("Failed to copy PDF worker:", e);
+	console.error("Failed to prepare PDF worker:", e);
 }
 
 const banner =
@@ -50,7 +50,8 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: 'main.js',
 	loader: {
-		'.wasm': 'file'
+		'.wasm': 'binary',
+		'.workerjs': 'text'
 	},
 	define: {
 		'import.meta.url': '"obsidian-plugin"'
