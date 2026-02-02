@@ -80,13 +80,13 @@ export default class SmartVaultPlugin extends Plugin {
         this.registerEditorExtension(inlineSuggestionExtension(this.app, this));
 
         this.addRibbonIcon('brain', 'Smart vault suggestions', () => {
-            this.activateSuggestionView();
+            void this.activateSuggestionView();
         });
 
         this.addCommand({
             id: 'scan-vault',
             name: 'Scan vault for embeddings',
-            callback: () => this.scanVault()
+            callback: () => { void this.scanVault(); }
         });
 
 
@@ -106,7 +106,7 @@ export default class SmartVaultPlugin extends Plugin {
             id: 'suggest-links-current',
             name: 'Suggest links for current note',
             editorCallback: (editor: Editor, view: MarkdownView) => {
-                this.suggestLinksForCurrentNote(view);
+                void this.suggestLinksForCurrentNote(view);
             }
         });
 
@@ -114,14 +114,14 @@ export default class SmartVaultPlugin extends Plugin {
             id: 'refresh-current-document',
             name: 'Refresh current document embedding',
             editorCallback: (editor: Editor, view: MarkdownView) => {
-                this.refreshCurrentDocument(view);
+                void this.refreshCurrentDocument(view);
             }
         });
 
         this.addCommand({
             id: 'toggle-suggestion-panel',
             name: 'Toggle suggestion panel',
-            callback: () => this.activateSuggestionView()
+            callback: () => { void this.activateSuggestionView(); }
         });
 
 
@@ -129,13 +129,13 @@ export default class SmartVaultPlugin extends Plugin {
         this.addCommand({
             id: 'generate-moc',
             name: 'Generate map of content (MOC)',
-            callback: () => this.openGenerateMOCModal()
+            callback: () => { void this.openGenerateMOCModal(); }
         });
 
         this.addCommand({
             id: 'extract-diagrams',
             name: 'Extract diagrams (Vision)',
-            callback: () => this.extractDiagramFromActiveNote()
+            callback: () => { void this.extractDiagramFromActiveNote(); }
         });
 
         this.addSettingTab(new SmartVaultSettingTab(this.app, this));
@@ -151,7 +151,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (selection) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Suggest Grammar Corrections')
+                            .setTitle('Smart Vault: Suggest grammar corrections')
                             .setIcon('spell-check')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -175,7 +175,7 @@ export default class SmartVaultPlugin extends Plugin {
                             .onClick(async () => {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
-                                    this.suggestionView.openChatWithFiles([file]);
+                                    void this.suggestionView.openChatWithFiles([file]);
                                 }
                             });
                     });
@@ -187,7 +187,7 @@ export default class SmartVaultPlugin extends Plugin {
                             .onClick(async () => {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
-                                    this.suggestionView.openChatWithAction([file], "Summarize this note.");
+                                    void this.suggestionView.openChatWithAction([file], "Summarize this note.");
                                 }
                             });
                     });
@@ -199,7 +199,7 @@ export default class SmartVaultPlugin extends Plugin {
                             .onClick(async () => {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
-                                    this.suggestionView.openChatWithAction([file], "Generate a structured outline of this note.");
+                                    void this.suggestionView.openChatWithAction([file], "Generate a structured outline of this note.");
                                 }
                             });
                     });
@@ -223,7 +223,7 @@ export default class SmartVaultPlugin extends Plugin {
         // Context Menu: "Chat with selected notes" (Multi-file)
         this.registerEvent(
             this.app.workspace.on('files-menu', (menu, files) => {
-                const selectedFiles = files.filter(f => f instanceof TFile) as TFile[];
+                const selectedFiles = files.filter(f => f instanceof TFile);
                 if (selectedFiles.length > 0) {
                     menu.addItem((item) => {
                         item
@@ -249,7 +249,7 @@ export default class SmartVaultPlugin extends Plugin {
                     if (this.settings.debugMode) {
                         console.debug('[DEBUG] file-open event:', file.path);
                     }
-                    this.onFileOpen(file);
+                    void this.onFileOpen(file);
                 }
             })
         );
@@ -263,7 +263,7 @@ export default class SmartVaultPlugin extends Plugin {
                         if (this.settings.debugMode) {
                             console.debug('[DEBUG] active-leaf-change event:', file.path);
                         }
-                        this.onFileOpen(file);
+                        void this.onFileOpen(file);
                     }
                 }
             })
@@ -847,7 +847,7 @@ export default class SmartVaultPlugin extends Plugin {
      * Generate link suggestions for a file.
      * Wrapper for FileProcessor.getSuggestionsForFile
      */
-    async getSuggestionsForFile(file: TFile, content: string, existingEmbedding?: number[], skipLLM: boolean = false, forceLLMRefresh: boolean = false): Promise<any[]> {
+    async getSuggestionsForFile(file: TFile, content: string, existingEmbedding?: number[], skipLLM: boolean = false, forceLLMRefresh: boolean = false): Promise<import('../ui/LinkSuggestionView').LinkSuggestion[]> {
         if (!this.fileProcessor) return [];
 
         let embedding = existingEmbedding;
@@ -890,7 +890,7 @@ export default class SmartVaultPlugin extends Plugin {
         const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_SUGGESTIONS);
 
         if (existing.length) {
-            this.app.workspace.revealLeaf(existing[0]);
+            void this.app.workspace.revealLeaf(existing[0]);
             return;
         }
 
@@ -899,7 +899,7 @@ export default class SmartVaultPlugin extends Plugin {
             active: true,
         });
 
-        this.app.workspace.revealLeaf(
+        void this.app.workspace.revealLeaf(
             this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_SUGGESTIONS)[0]
         );
     }
@@ -914,7 +914,7 @@ export default class SmartVaultPlugin extends Plugin {
 
         const intervalMs = this.settings.scanInterval * 60 * 1000;
         this.scanIntervalId = window.setInterval(() => {
-            this.scanVault();
+            void this.scanVault();
         }, intervalMs);
 
         if (this.settings.debugMode) {
@@ -946,7 +946,8 @@ export default class SmartVaultPlugin extends Plugin {
             try {
                 const embeddingsJson = this.smartVault.serialize_embeddings();
                 const embeddingsPath = this.cacheManager.getEmbeddingsPath();
-                this.app.vault.adapter.write(embeddingsPath, embeddingsJson);
+                this.app.vault.adapter.write(embeddingsPath, embeddingsJson)
+                    .catch(e => console.error('Failed to write embeddings on unload:', e));
             } catch (error) {
                 console.error('Failed to save embeddings on unload:', error);
             }
@@ -1045,7 +1046,7 @@ export default class SmartVaultPlugin extends Plugin {
             const targetFile = await this.app.vault.create(filename, mocContent);
 
             // Open the new file
-            this.app.workspace.getLeaf().openFile(targetFile);
+            void this.app.workspace.getLeaf().openFile(targetFile);
             new Notice(`MOC created: ${filename}`);
 
         } catch (error) {

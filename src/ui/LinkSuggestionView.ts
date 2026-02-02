@@ -76,6 +76,7 @@ export class LinkSuggestionView extends ItemView {
         container.addClass('smart-vault-suggestions');
 
         this.render();
+        await Promise.resolve();
     }
 
     async updateForFile(file: TFile) {
@@ -298,24 +299,26 @@ export class LinkSuggestionView extends ItemView {
                     cls: 'suggestion-button suggestion-mini-btn',
                     attr: { title: 'Manually trigger LLM reranking' }
                 });
-                rerankBtn.onclick = async () => {
-                    if (!this.currentFile) return;
-                    rerankBtn.disabled = true;
-                    rerankBtn.textContent = '...';
-                    try {
-                        const content = await this.app.vault.read(this.currentFile);
-                        // Force LLM = true (pass skipLLM=false), Force Refresh = true
-                        const suggestions = await this.plugin.getSuggestionsForFile(this.currentFile, content, undefined, false, true);
-                        this.allDocumentSuggestions.set(this.currentFile.path, suggestions);
-                        await this.plugin.saveSuggestions();
-                        this.setSuggestions(suggestions, this.currentFile);
-                    } catch (e) {
-                        console.error("Manual rerank failed", e);
-                        new Notice("Manual rerank failed: " + e);
-                    } finally {
-                        rerankBtn.disabled = false;
-                        rerankBtn.textContent = '✨ AI';
-                    }
+                rerankBtn.onclick = () => {
+                    void (async () => {
+                        if (!this.currentFile) return;
+                        rerankBtn.disabled = true;
+                        rerankBtn.textContent = '...';
+                        try {
+                            const content = await this.app.vault.read(this.currentFile);
+                            // Force LLM = true (pass skipLLM=false), Force Refresh = true
+                            const suggestions = await this.plugin.getSuggestionsForFile(this.currentFile, content, undefined, false, true);
+                            this.allDocumentSuggestions.set(this.currentFile.path, suggestions);
+                            await this.plugin.saveSuggestions();
+                            this.setSuggestions(suggestions, this.currentFile);
+                        } catch (e) {
+                            console.error("Manual rerank failed", e);
+                            new Notice("Manual rerank failed: " + e);
+                        } finally {
+                            rerankBtn.disabled = false;
+                            rerankBtn.textContent = '✨ AI';
+                        }
+                    })();
                 };
             }
 
@@ -324,52 +327,54 @@ export class LinkSuggestionView extends ItemView {
                 cls: 'suggestion-button suggestion-mini-btn',
                 attr: { title: 'Refresh embeddings (vector only)' }
             });
-            refreshButton.onclick = async () => {
-                if (this.plugin.settings.debugMode) {
-                    console.log('[DEBUG] Refresh button clicked!');
-                }
-                refreshButton.disabled = true;
-                refreshButton.addClass('spinning');
-                try {
-                    // Try to get the active view, but fall back to using this.currentFile
-                    let view = this.app.workspace.getActiveViewOfType(MarkdownView);
+            refreshButton.onclick = () => {
+                void (async () => {
+                    if (this.plugin.settings.debugMode) {
+                        console.log('[DEBUG] Refresh button clicked!');
+                    }
+                    refreshButton.disabled = true;
+                    refreshButton.addClass('spinning');
+                    try {
+                        // Try to get the active view, but fall back to using this.currentFile
+                        let view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
-                    // If no active view, try to find the leaf with our current file
-                    if (!view && this.currentFile) {
-                        const leaves = this.app.workspace.getLeavesOfType('markdown');
-                        for (const leaf of leaves) {
-                            const leafView = leaf.view;
-                            if (leafView instanceof MarkdownView && leafView.file?.path === this.currentFile.path) {
-                                view = leafView;
-                                break;
+                        // If no active view, try to find the leaf with our current file
+                        if (!view && this.currentFile) {
+                            const leaves = this.app.workspace.getLeavesOfType('markdown');
+                            for (const leaf of leaves) {
+                                const leafView = leaf.view;
+                                if (leafView instanceof MarkdownView && leafView.file?.path === this.currentFile.path) {
+                                    view = leafView;
+                                    break;
+                                }
                             }
                         }
+
+                        if (view && view.file) {
+                            // Clear cached suggestions to force regeneration
+                            this.allDocumentSuggestions.delete(view.file.path);
+                            await this.plugin.suggestLinksForCurrentNote(view);
+                            // Refresh our view in case suggestLinks didn't trigger it (it usually does via events)
+                            const suggestions = this.allDocumentSuggestions.get(view.file.path);
+                            if (suggestions) this.setSuggestions(suggestions, view.file);
+
+                        } else if (this.currentFile) {
+                            // Fallback refesh by file
+                            const content = await this.app.vault.read(this.currentFile);
+                            const embedding = await this.plugin.fileProcessor!.rerankerService.generateEmbedding(content); // force regen embedding
+                            const skipLLM = this.plugin.settings.manualLLMRerank;
+                            const suggestions = await this.plugin.getSuggestionsForFile(this.currentFile, content, embedding, skipLLM);
+                            this.allDocumentSuggestions.set(this.currentFile.path, suggestions);
+                            this.setSuggestions(suggestions, this.currentFile);
+                        }
+
+                    } catch (error) {
+                        console.error("Refresh failed", error);
+                    } finally {
+                        refreshButton.disabled = false;
+                        refreshButton.removeClass('spinning');
                     }
-
-                    if (view && view.file) {
-                        // Clear cached suggestions to force regeneration
-                        this.allDocumentSuggestions.delete(view.file.path);
-                        await this.plugin.suggestLinksForCurrentNote(view);
-                        // Refresh our view in case suggestLinks didn't trigger it (it usually does via events)
-                        const suggestions = this.allDocumentSuggestions.get(view.file.path);
-                        if (suggestions) this.setSuggestions(suggestions, view.file);
-
-                    } else if (this.currentFile) {
-                        // Fallback refesh by file
-                        const content = await this.app.vault.read(this.currentFile);
-                        const embedding = await this.plugin.fileProcessor!.rerankerService.generateEmbedding(content); // force regen embedding
-                        const skipLLM = this.plugin.settings.manualLLMRerank;
-                        const suggestions = await this.plugin.getSuggestionsForFile(this.currentFile, content, embedding, skipLLM);
-                        this.allDocumentSuggestions.set(this.currentFile.path, suggestions);
-                        this.setSuggestions(suggestions, this.currentFile);
-                    }
-
-                } catch (error) {
-                    console.error("Refresh failed", error);
-                } finally {
-                    refreshButton.disabled = false;
-                    refreshButton.removeClass('spinning');
-                }
+                })();
             };
         }
 
@@ -396,40 +401,42 @@ export class LinkSuggestionView extends ItemView {
                 text: '↻ Retry',
                 cls: 'suggestion-button-secondary smart-vault-label-tag'
             });
-            retryBtn.onclick = async () => {
-                retryBtn.disabled = true;
-                retryBtn.textContent = 'Retrying...';
-                try {
-                    if (this.plugin.settings.debugMode) {
-                        console.log(`[DEBUG] Retry button clicked for: ${this.currentFile!.path}`);
-                    }
-                    // Clear the failure and suggestion cache to force regeneration
-                    this.llmFailedDocuments.delete(this.currentFile!.path);
-                    this.allDocumentSuggestions.delete(this.currentFile!.path);
-                    if (this.plugin.settings.debugMode) {
-                        console.log(`[DEBUG] Cleared failure tracking and suggestion cache for: ${this.currentFile!.path}`);
-                    }
+            retryBtn.onclick = () => {
+                void (async () => {
+                    retryBtn.disabled = true;
+                    retryBtn.textContent = 'Retrying...';
+                    try {
+                        if (this.plugin.settings.debugMode) {
+                            console.log(`[DEBUG] Retry button clicked for: ${this.currentFile!.path}`);
+                        }
+                        // Clear the failure and suggestion cache to force regeneration
+                        this.llmFailedDocuments.delete(this.currentFile!.path);
+                        this.allDocumentSuggestions.delete(this.currentFile!.path);
+                        if (this.plugin.settings.debugMode) {
+                            console.log(`[DEBUG] Cleared failure tracking and suggestion cache for: ${this.currentFile!.path}`);
+                        }
 
-                    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-                    if (view && view.file) {
-                        if (this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] Found active view, calling refreshCurrentDocument...`);
+                        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+                        if (view && view.file) {
+                            if (this.plugin.settings.debugMode) {
+                                console.log(`[DEBUG] Found active view, calling refreshCurrentDocument...`);
+                            }
+                            await this.plugin.refreshCurrentDocument(view);
+                            if (this.plugin.settings.debugMode) {
+                                console.log(`[DEBUG] refreshCurrentDocument completed`);
+                            }
+                        } else {
+                            if (this.plugin.settings.debugMode) {
+                                console.log(`[DEBUG] No active markdown view found!`);
+                            }
                         }
-                        await this.plugin.refreshCurrentDocument(view);
-                        if (this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] refreshCurrentDocument completed`);
-                        }
-                    } else {
-                        if (this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] No active markdown view found!`);
-                        }
+                    } catch (error) {
+                        console.error('Retry failed:', error);
+                    } finally {
+                        retryBtn.disabled = false;
+                        retryBtn.textContent = '↻ Retry';
                     }
-                } catch (error) {
-                    console.error('Retry failed:', error);
-                } finally {
-                    retryBtn.disabled = false;
-                    retryBtn.textContent = '↻ Retry';
-                }
+                })();
             };
         }
 
@@ -445,15 +452,17 @@ export class LinkSuggestionView extends ItemView {
                     text: 'Scan Vault Now',
                     cls: 'suggestion-button mod-cta'
                 });
-                scanButton.onclick = async () => {
-                    scanButton.disabled = true;
-                    scanButton.textContent = 'Scanning...';
-                    try {
-                        await this.plugin.scanVault();
-                    } finally {
-                        scanButton.disabled = false;
-                        scanButton.textContent = 'Scan vault now';
-                    }
+                scanButton.onclick = () => {
+                    void (async () => {
+                        scanButton.disabled = true;
+                        scanButton.textContent = 'Scanning...';
+                        try {
+                            await this.plugin.scanVault();
+                        } finally {
+                            scanButton.disabled = false;
+                            scanButton.textContent = 'Scan vault now';
+                        }
+                    })();
                 };
             } else {
                 emptyDiv.createEl('p', { text: 'No suggestions found for this note.' });
@@ -709,17 +718,19 @@ export class LinkSuggestionView extends ItemView {
             }
         };
 
-        button.onclick = async () => {
-            // Clear preview state
-            if (previewTimeout !== null) {
-                clearTimeout(previewTimeout);
-            }
-            isShowingPreview = false;
+        button.onclick = () => {
+            void (async () => {
+                // Clear preview state
+                if (previewTimeout !== null) {
+                    clearTimeout(previewTimeout);
+                }
+                isShowingPreview = false;
 
-            if (this.plugin.settings.debugMode) {
-                console.debug('Insert link clicked for:', suggestion.title);
-            }
-            await this.insertLink(suggestion.title, targetFile);
+                if (this.plugin.settings.debugMode) {
+                    console.debug('Insert link clicked for:', suggestion.title);
+                }
+                await this.insertLink(suggestion.title, targetFile);
+            })();
         };
     }
 

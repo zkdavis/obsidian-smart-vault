@@ -55,7 +55,7 @@ export class FileProcessor {
     async refreshDocument(
         file: TFile,
         saveEmbeddings: () => Promise<void>
-    ): Promise<any[]> {
+    ): Promise<import('../../ui/LinkSuggestionView').LinkSuggestion[]> {
         if (this.settings.debugMode) {
             console.debug(`[DEBUG] Refresh requested for: ${file.path}`);
         }
@@ -128,7 +128,7 @@ export class FileProcessor {
         embedding: number[],
         skipLLM: boolean = false,
         forceLLMRefresh: boolean = false
-    ): Promise<any[]> {
+    ): Promise<import('../../ui/LinkSuggestionView').LinkSuggestion[]> {
         if (this.settings.debugMode) {
             console.debug(`[DEBUG] getSuggestionsForFile: ${file.path}`);
         }
@@ -195,7 +195,7 @@ export class FileProcessor {
      * @param file - The active file
      * @returns Promise resolving to array of suggestions
      */
-    async suggestLinksForCurrentNote(file: TFile): Promise<any[]> {
+    async suggestLinksForCurrentNote(file: TFile): Promise<import('../../ui/LinkSuggestionView').LinkSuggestion[]> {
         const content = await this.app.vault.read(file);
         const truncatedContent = truncateContent(content, this.settings.maxContentLength);
         const embedding = await this.rerankerService.generateEmbedding(truncatedContent);

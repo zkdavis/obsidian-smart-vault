@@ -30,10 +30,12 @@ export class OrganizationTab extends BaseTab {
 
     async onOpen(): Promise<void> {
         this.render();
+        await Promise.resolve();
     }
 
     async onClose(): Promise<void> {
         this.containerEl.empty();
+        await Promise.resolve();
     }
 
     setFileContext(file: TFile): void {
@@ -114,7 +116,7 @@ export class OrganizationTab extends BaseTab {
             );
 
             const timeoutMs = this.plugin.settings.llmTimeout || 30000;
-            const timeoutPromise = new Promise<any>((_, reject) => {
+            const timeoutPromise = new Promise<unknown>((_, reject) => {
                 setTimeout(() => reject(new Error('Organization analysis timed out')), timeoutMs);
             });
 

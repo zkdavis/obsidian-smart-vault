@@ -190,12 +190,12 @@ export class VaultScanner {
 
             // Save embeddings periodically (every 3 batches)
             if (Math.floor(i / batchSize) % 3 === 0) {
-                await this.cacheManager.saveEmbeddings();
+                this.cacheManager.saveEmbeddings();
             }
         }
 
         // Final save
-        await this.cacheManager.saveEmbeddings();
+        this.cacheManager.saveEmbeddings();
         await this.cacheManager.saveKeywords();
         await this.cacheManager.saveSuggestions(this.suggestionView);
 
@@ -266,11 +266,11 @@ export class VaultScanner {
             notice.setMessage(`Scanning: ${processed}/${files.length} files (${newEmbeddings} new)`);
 
             if (Math.floor(i / batchSize) % 3 === 0) {
-                await this.cacheManager.saveEmbeddings();
+                this.cacheManager.saveEmbeddings();
             }
         }
 
-        await this.cacheManager.saveEmbeddings();
+        this.cacheManager.saveEmbeddings();
         await this.cacheManager.saveKeywords();
         await this.cacheManager.saveSuggestions(this.suggestionView);
 

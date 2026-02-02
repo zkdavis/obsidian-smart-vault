@@ -55,10 +55,12 @@ export class FormattingTab extends BaseTab {
 
     async onOpen(): Promise<void> {
         this.render();
+        await Promise.resolve();
     }
 
     async onClose(): Promise<void> {
         this.containerEl.empty();
+        await Promise.resolve();
     }
 
     render(): void {
@@ -478,7 +480,7 @@ export class FormattingTab extends BaseTab {
             });
         } catch (error) {
             const e = error as Error;
-            new Notice('Failed to add tag: ' + (e.message || e));
+            new Notice(`Failed to add tag: ${e.message || e}`);
         }
     }
 }

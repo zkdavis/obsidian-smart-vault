@@ -3,10 +3,10 @@ import { App, Modal } from 'obsidian';
 export class ConfirmModal extends Modal {
     title: string;
     message: string;
-    onConfirm: (confirmed: boolean) => void;
+    onConfirm: (confirmed: boolean) => void | Promise<void>;
     confirmText: string;
 
-    constructor(app: App, title: string, message: string, onConfirm: (confirmed: boolean) => void, confirmText: string = 'Confirm') {
+    constructor(app: App, title: string, message: string, onConfirm: (confirmed: boolean) => void | Promise<void>, confirmText: string = 'Confirm') {
         super(app);
         this.title = title;
         this.message = message;
@@ -30,8 +30,10 @@ export class ConfirmModal extends Modal {
             }
         });
 
-        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container smart-vault-flex-row smart-vault-gap-12 smart-vault-margin-top-20' });
-        buttonContainer.style.justifyContent = 'flex-end'; // One last inline style? No, I'll use a class or just let it be.
+        const buttonContainer = contentEl.createEl('div', {
+            cls: 'modal-button-container smart-vault-flex-row smart-vault-gap-12 smart-vault-margin-top-20',
+            attr: { style: 'justify-content: flex-end' }
+        });
         // Actually I have .smart-vault-space-between but I want flex-end.
         // I'll add .smart-vault-flex-end to styles.css in a moment if needed. For now I'll use center or just standard.
 

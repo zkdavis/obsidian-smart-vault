@@ -14,7 +14,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl('h2', { text: 'Smart Vault Organizer Settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Smart Vault Organizer Settings');
 
         // Contribution Buttons
         const contributionContainer = containerEl.createDiv({ cls: 'smart-vault-contribution-container' });
@@ -47,17 +49,21 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         createButton('🍵 Ko-Fi', 'https://ko-fi.com/zkdavis');
 
         // Debug Section
-        containerEl.createEl('h3', { text: 'Debug' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Debug');
 
         new Setting(containerEl)
             .setName('Enable Debug Mode')
             .setDesc('Show detailed debug logs in console (Ctrl+Shift+I)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.debugMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.debugMode = value;
-                    await this.plugin.saveSettings();
-                    console.log(`[DEBUG] Debug mode ${value ? 'enabled' : 'disabled'}`);
+                .onChange((value) => {
+                    void (async () => {
+                        this.plugin.settings.debugMode = value;
+                        await this.plugin.saveSettings();
+                        console.log(`[DEBUG] Debug mode ${value ? 'enabled' : 'disabled'}`);
+                    })();
                 }));
 
         new Setting(containerEl)
@@ -71,7 +77,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Embedding settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Embedding settings');
 
         new Setting(containerEl)
             .setName('Ollama Endpoint')
@@ -174,7 +182,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     }
                 }));
 
-        containerEl.createEl('h3', { text: 'Chat RAG settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Chat RAG settings');
 
         new Setting(containerEl)
             .setName('Vault Mode Threshold')
@@ -201,7 +211,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         // LLM Reranking Section
-        containerEl.createEl('h3', { text: 'LLM-enhanced suggestions' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('LLM-enhanced suggestions');
         containerEl.createEl('p', {
             text: 'Use a larger language model like qwen2.5:7b to intelligently rerank and explain link suggestions.',
             cls: 'setting-item-description'
@@ -238,7 +250,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h4', { text: 'Task-specific models' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Task-specific models');
 
         new Setting(containerEl)
             .setName('Chat Model')
@@ -376,7 +390,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         // Handwritten Notes Section
-        containerEl.createEl('h3', { text: 'Handwritten notes (vision)' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Handwritten notes (vision)');
         containerEl.createEl('p', {
             text: 'Automatically process handwritten notes dropped into a specific folder.',
             cls: 'setting-item-description'
@@ -427,7 +443,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Vault management' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Vault management');
 
         new Setting(containerEl)
             .setName('Cache Directory')
@@ -446,15 +464,17 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .addButton(button => button
                 .setButtonText('Scan vault now')
                 .setCta()
-                .onClick(async () => {
-                    button.setButtonText('Scanning...');
-                    button.setDisabled(true);
-                    try {
-                        await this.plugin.scanVault();
-                    } finally {
-                        button.setButtonText('Scan vault now');
-                        button.setDisabled(false);
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        button.setButtonText('Scanning...');
+                        button.setDisabled(true);
+                        try {
+                            await this.plugin.scanVault();
+                        } finally {
+                            button.setButtonText('Scan vault now');
+                            button.setDisabled(false);
+                        }
+                    })();
                 }));
 
         new Setting(containerEl)

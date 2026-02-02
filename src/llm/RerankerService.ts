@@ -244,17 +244,18 @@ export class RerankerService {
                     );
                     // Success - break out of retry loop
                     break;
-                } catch (error: any) {
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
                     if (attempt === 1) {
                         // First failure - wait with backoff before retry to let LLM recover
                         if (this.settings.debugMode) {
-                            console.debug(`[DEBUG] LLM reranking attempt ${attempt} failed: ${error.message}. Waiting ${CONSTANTS.LLM_RETRY_DELAY_MS}ms before retry...`);
+                            console.debug(`[DEBUG] LLM reranking attempt ${attempt} failed: ${errorMessage}. Waiting ${CONSTANTS.LLM_RETRY_DELAY_MS}ms before retry...`);
                         }
                         await new Promise(resolve => setTimeout(resolve, CONSTANTS.LLM_RETRY_DELAY_MS));
                     } else {
                         // Second failure - will show visual warning on page
                         if (this.settings.debugMode) {
-                            console.debug(`[DEBUG] LLM reranking attempt ${attempt} failed: ${error.message}. Giving up.`);
+                            console.debug(`[DEBUG] LLM reranking attempt ${attempt} failed: ${errorMessage}. Giving up.`);
                         }
                         throw error; // Re-throw to trigger fallback with llmFailed flag
                     }
@@ -315,7 +316,7 @@ export class RerankerService {
             }
 
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             // LLM reranking failed - fall back to embedding-only suggestions
             // This is expected when the LLM doesn't return valid JSON array format
             if (this.settings.debugMode) {
@@ -323,10 +324,11 @@ export class RerankerService {
                 console.debug('[DEBUG] Error:', error);
             }
             // Fallback to original suggestions on error with failure flag
+            const errorMessage = error instanceof Error ? error.message : 'LLM reranking failed';
             return {
                 suggestions,
                 llmFailed: true,
-                failureReason: error.message || 'LLM reranking failed'
+                failureReason: errorMessage
             };
         } finally {
             // Always clean up pending request tracker

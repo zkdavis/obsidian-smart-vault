@@ -2,6 +2,7 @@ import { App, TFile, Notice } from 'obsidian';
 import type { KeywordCache, SuggestionCache } from './types';
 import * as wasmNamespace from '../../../pkg/obsidian_smart_vault';
 import type { LinkSuggestionView } from '../../ui/LinkSuggestionView';
+import type { ChatMessage } from '../../ui/tabs/ChatTab';
 
 /**
  * Manages all cache operations for the Smart Vault plugin.
@@ -101,7 +102,7 @@ export class CacheManager {
     /**
      * Load chat history from JSON file.
      */
-    async loadChatHistory(): Promise<Record<string, any[]>> {
+    async loadChatHistory(): Promise<Record<string, ChatMessage[]>> {
         try {
             const path = this.getChatHistoryPath();
             const adapter = this.app.vault.adapter;
@@ -120,7 +121,7 @@ export class CacheManager {
     /**
      * Save chat history to JSON file.
      */
-    async saveChatHistory(history: Record<string, any[]>) {
+    async saveChatHistory(history: Record<string, ChatMessage[]>) {
         try {
             const path = this.getChatHistoryPath();
             const adapter = this.app.vault.adapter;
@@ -193,29 +194,31 @@ export class CacheManager {
             clearTimeout(this.saveCacheIndexTimeout);
         }
 
-        this.saveCacheIndexTimeout = window.setTimeout(async () => {
-            this.saveCacheIndexTimeout = null;
+        this.saveCacheIndexTimeout = window.setTimeout(() => {
+            void (async () => {
+                this.saveCacheIndexTimeout = null;
 
-            try {
-                const cachePath = this.getCacheIndexPath();
-                const adapter = this.app.vault.adapter;
+                try {
+                    const cachePath = this.getCacheIndexPath();
+                    const adapter = this.app.vault.adapter;
 
-                const startTime = performance.now();
-                const binaryData = this.smartVault.serialize_cache_index();
-                const arrayBuffer = binaryData.buffer;
+                    const startTime = performance.now();
+                    const binaryData = this.smartVault.serialize_cache_index();
+                    const arrayBuffer = binaryData.buffer;
 
-                // @ts-ignore
-                await adapter.writeBinary(cachePath, arrayBuffer);
+                    // @ts-ignore
+                    await adapter.writeBinary(cachePath, arrayBuffer);
 
-                const saveTime = (performance.now() - startTime).toFixed(2);
-                const sizeKB = (arrayBuffer.byteLength / 1024).toFixed(2);
+                    const saveTime = (performance.now() - startTime).toFixed(2);
+                    const sizeKB = (arrayBuffer.byteLength / 1024).toFixed(2);
 
-                if (this.debugMode) {
-                    console.debug(`[DEBUG] Saved cache index in ${saveTime}ms (${sizeKB} KB)`);
+                    if (this.debugMode) {
+                        console.debug(`[DEBUG] Saved cache index in ${saveTime}ms (${sizeKB} KB)`);
+                    }
+                } catch (error) {
+                    console.error('Error saving cache index:', error);
                 }
-            } catch (error) {
-                console.error('Error saving cache index:', error);
-            }
+            })();
         }, 500);
     }
 
@@ -285,7 +288,7 @@ export class CacheManager {
             if (!exists) return;
 
             const cacheJson = await adapter.read(cachePath);
-            const parsed: { [key: string]: any } = JSON.parse(cacheJson);
+            const parsed: Record<string, unknown> = JSON.parse(cacheJson);
 
             let count = 0;
             for (const [key, value] of Object.entries(parsed)) {
