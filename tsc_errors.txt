@@ -1,0 +1,33 @@
+node_modules/pdfjs-dist/types/src/display/annotation_storage.d.ts(68,26): error TS2552: Cannot find name 'MapIterator'. Did you mean 'Iterator'?
+node_modules/pdfjs-dist/types/src/display/api.d.ts(771,18): error TS2315: Type 'Uint8Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/api_utils.d.ts(1,40): error TS2315: Type 'Uint8Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/drawers/signaturedraw.d.ts(12,45): error TS2315: Type 'Int32Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/drawers/signaturedraw.d.ts(23,122): error TS2315: Type 'Uint32Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/drawers/signaturedraw.d.ts(23,149): error TS2315: Type 'Uint8Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/drawers/signaturedraw.d.ts(24,50): error TS2315: Type 'Uint32Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/drawers/signaturedraw.d.ts(25,45): error TS2315: Type 'Uint8ClampedArray' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/drawers/signaturedraw.d.ts(74,19): error TS2315: Type 'Float32Array' is not generic.
+node_modules/pdfjs-dist/types/src/display/editor/stamp.d.ts(40,19): error TS2304: Cannot find name 'ImageDataArray'.
+node_modules/pdfjs-dist/types/src/display/optional_content_config.d.ts(16,26): error TS2552: Cannot find name 'MapIterator'. Did you mean 'Iterator'?
+node_modules/pdfjs-dist/types/src/shared/util.d.ts(362,42): error TS2315: Type 'Uint8Array' is not generic.
+src/ui/LinkSuggestionView.ts(644,22): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(645,49): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(646,54): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(647,50): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(647,73): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(648,50): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(653,33): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(654,33): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(659,33): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(659,61): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(660,33): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(660,61): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(660,84): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(665,21): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(668,46): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(668,84): error TS18047: 'cachedInsertPoint' is possibly 'null'.
+src/ui/LinkSuggestionView.ts(1185,46): error TS18047: 'insertPoint' is possibly 'null'.
+src/ui/tabs/FormattingTab.ts(363,21): error TS7034: Variable 'q' implicitly has type 'any' in some locations where its type cannot be determined.
+src/ui/tabs/FormattingTab.ts(363,24): error TS7034: Variable 'a' implicitly has type 'any' in some locations where its type cannot be determined.
+src/ui/tabs/FormattingTab.ts(376,75): error TS7005: Variable 'q' implicitly has an 'any' type.
+src/ui/tabs/FormattingTab.ts(376,81): error TS7005: Variable 'a' implicitly has an 'any' type.

@@ -2,20 +2,30 @@ import { App, EditorSuggest, EditorPosition, Editor, TFile, EditorSuggestTrigger
 import type SmartVaultPlugin from '../plugin/SmartVaultPlugin';
 
 /**
+ * Interface for an inline suggestion
+ */
+interface InlineSuggestion {
+    title: string;
+    path: string;
+    similarity: number | null;
+    context?: string;
+}
+
+/**
  * Inline autocomplete for link suggestions.
  * Triggers when user types [[ to create a link manually,
  * or provides semantic search suggestions while typing normal text.
  */
-export class InlineLinkSuggest extends EditorSuggest<any> {
+export class InlineLinkSuggest extends EditorSuggest<InlineSuggestion> {
     plugin: SmartVaultPlugin;
-    lastSuggestions: any[] = [];
+    lastSuggestions: InlineSuggestion[] = [];
 
     constructor(app: App, plugin: SmartVaultPlugin) {
         super(app);
         this.plugin = plugin;
     }
 
-    onTrigger(cursor: EditorPosition, editor: Editor, file: TFile): EditorSuggestTriggerInfo | null {
+    onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile): EditorSuggestTriggerInfo | null {
         // Respect settings toggle (if we implement live preview later)
         if (!this.plugin.settings.enableHoverPreviews) {
             return null;
@@ -37,7 +47,7 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
         return null;
     }
 
-    async getSuggestions(context: EditorSuggestContext): Promise<any[]> {
+    async getSuggestions(context: EditorSuggestContext): Promise<InlineSuggestion[]> {
         const query = context.query.toLowerCase();
 
         if (!this.plugin.smartVault || this.plugin.smartVault.get_file_count() === 0) {
@@ -64,12 +74,14 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
                     // Get semantic suggestions with lower threshold
                     const suggestions = this.plugin.smartVault.suggest_links_for_text(
                         query,
-                        queryEmbedding,
-                        this.plugin.settings.similarityThreshold - 0.15  // Lower threshold for inline
+                        new Float32Array(queryEmbedding),
+                        this.plugin.settings.similarityThreshold - 0.15,  // Lower threshold for inline
+                        "",
+                        8
                     );
 
                     // Map to the format we need
-                    const semanticMatches = suggestions.slice(0, 8).map((s: any) => ({
+                    const semanticMatches = suggestions.slice(0, 8).map((s: import('../ui/LinkSuggestionView').LinkSuggestion) => ({
                         title: s.title,
                         path: s.path,
                         similarity: s.similarity,
@@ -80,13 +92,15 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
                         return semanticMatches;
                     }
                 } catch (error) {
-                    console.error('Semantic search error:', error);
+                    if (this.plugin.settings.debugMode) {
+                        console.error('Semantic search error:', error);
+                    }
                 }
             }
 
             // Fallback to name-based matching (for [[ context or if semantic fails)
             const files = this.app.vault.getMarkdownFiles();
-            const nameMatches = files
+            const nameMatches: InlineSuggestion[] = files
                 .filter(f => f.basename.toLowerCase().includes(query))
                 .slice(0, 8)
                 .map(f => ({
@@ -97,12 +111,14 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
 
             return nameMatches;
         } catch (error) {
-            console.error('Suggestion error:', error);
+            if (this.plugin.settings.debugMode) {
+                console.error('Suggestion error:', error);
+            }
             return [];
         }
     }
 
-    renderSuggestion(suggestion: any, el: HTMLElement): void {
+    renderSuggestion(suggestion: InlineSuggestion, el: HTMLElement): void {
         const titleText = suggestion.similarity
             ? `${suggestion.title} (${(suggestion.similarity * 100).toFixed(0)}%)`
             : suggestion.title;
@@ -110,7 +126,7 @@ export class InlineLinkSuggest extends EditorSuggest<any> {
         el.createEl('small', { text: suggestion.path, cls: 'suggestion-path' });
     }
 
-    selectSuggestion(suggestion: any, evt: MouseEvent | KeyboardEvent): void {
+    selectSuggestion(suggestion: InlineSuggestion, _evt: MouseEvent | KeyboardEvent): void {
         if (!this.context) return;
 
         const editor = this.context.editor;

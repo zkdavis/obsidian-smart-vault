@@ -1,0 +1,47 @@
+
+> obsidian-smart-vault@1.0.2 lint
+> eslint src/**/*.ts
+
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\editor\InlineSuggestionExtension.ts
+   4:15  error  'editorLivePreviewField' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  11:21  error  'view' is defined but never used. Allowed unused args must match /^_/u                    @typescript-eslint/no-unused-vars
+  15:16  error  'update' is defined but never used. Allowed unused args must match /^_/u                  @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\llm\RerankerService.ts
+  1:10  error  'Notice' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\plugin\SmartVaultPlugin.ts
+     1:38  error  'WorkspaceLeaf' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  1181:23  error  'newFile' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\plugin\cache\CacheManager.ts
+  930:15  error  'exportPath' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\plugin\scanning\HandwrittenNoteWatcher.ts
+    1:49  error  'Platform' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  125:70  error  'forceExecution' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  187:23  error  'startTime' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\suggest\InlineLinkSuggest.ts
+   28:55  error  'file' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  129:52  error  'evt' is defined but never used. Allowed unused args must match /^_/u   @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\ui\LinkSuggestionView.ts
+  1070:28  error  Unexpected constant condition                                                            no-constant-condition
+  1080:31  error  'actualPhrase' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1147:28  error  Require statement not part of import statement                                           @typescript-eslint/no-var-requires
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\ui\tabs\ChatTab.ts
+  149:19  error  'label' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  528:34  error  'i' is defined but never used. Allowed unused args must match /^_/u                 @typescript-eslint/no-unused-vars
+  581:23  error  'newFile' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\ui\tabs\FormattingTab.ts
+  99:30  error  'container' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\zkd\Documents\GitHub\obsidian_app\src\ui\tabs\OrganizationTab.ts
+  66:28  error  'container' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+Γ£û 20 problems (20 errors, 0 warnings)
+

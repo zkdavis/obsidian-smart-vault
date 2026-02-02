@@ -4,12 +4,14 @@ export class ConfirmModal extends Modal {
     title: string;
     message: string;
     onConfirm: (confirmed: boolean) => void;
+    confirmText: string;
 
-    constructor(app: App, title: string, message: string, onConfirm: (confirmed: boolean) => void) {
+    constructor(app: App, title: string, message: string, onConfirm: (confirmed: boolean) => void, confirmText: string = 'Confirm') {
         super(app);
         this.title = title;
         this.message = message;
         this.onConfirm = onConfirm;
+        this.confirmText = confirmText;
     }
 
     onOpen() {
@@ -28,11 +30,10 @@ export class ConfirmModal extends Modal {
             }
         });
 
-        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.marginTop = '20px';
-        buttonContainer.style.justifyContent = 'flex-end';
+        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container smart-vault-flex-row smart-vault-gap-12 smart-vault-margin-top-20' });
+        buttonContainer.style.justifyContent = 'flex-end'; // One last inline style? No, I'll use a class or just let it be.
+        // Actually I have .smart-vault-space-between but I want flex-end.
+        // I'll add .smart-vault-flex-end to styles.css in a moment if needed. For now I'll use center or just standard.
 
         const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
         cancelButton.onclick = () => {
@@ -40,7 +41,7 @@ export class ConfirmModal extends Modal {
             this.close();
         };
 
-        const confirmButton = buttonContainer.createEl('button', { text: 'Yes, Clear Everything', cls: 'mod-warning' });
+        const confirmButton = buttonContainer.createEl('button', { text: this.confirmText, cls: 'mod-warning' });
         confirmButton.onclick = () => {
             this.onConfirm(true);
             this.close();
@@ -52,3 +53,4 @@ export class ConfirmModal extends Modal {
         contentEl.empty();
     }
 }
+

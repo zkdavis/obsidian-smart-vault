@@ -718,3 +718,281 @@
     background-color: var(--scrollbar-thumb-bg);
     border-radius: 3px;
 }
+
+/* Utility Classes to replace inline styles */
+.smart-vault-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.smart-vault-flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.smart-vault-flex-row {
+    display: flex;
+    flex-direction: row;
+}
+
+.smart-vault-flex-wrap {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.smart-vault-flex-grow {
+    flex-grow: 1;
+}
+
+.smart-vault-gap-4 {
+    gap: 4px;
+}
+
+.smart-vault-gap-6 {
+    gap: 6px;
+}
+
+.smart-vault-gap-8 {
+    gap: 8px;
+}
+
+.smart-vault-gap-12 {
+    gap: 12px;
+}
+
+.smart-vault-margin-0 {
+    margin: 0;
+}
+
+.smart-vault-margin-bottom-8 {
+    margin-bottom: 8px;
+}
+
+.smart-vault-margin-bottom-12 {
+    margin-bottom: 12px;
+}
+
+.smart-vault-margin-top-10 {
+    margin-top: 10px;
+}
+
+.smart-vault-margin-top-20 {
+    margin-top: 20px;
+}
+
+.smart-vault-padding-8 {
+    padding: 8px;
+}
+
+.smart-vault-padding-10 {
+    padding: 10px;
+}
+
+.smart-vault-bold {
+    font-weight: 600;
+}
+
+.smart-vault-muted {
+    color: var(--text-muted);
+}
+
+.smart-vault-accent {
+    color: var(--interactive-accent);
+}
+
+.smart-vault-small {
+    font-size: 0.85em;
+}
+
+.smart-vault-xsmall {
+    font-size: 0.8em;
+}
+
+.smart-vault-italic {
+    font-style: italic;
+}
+
+.smart-vault-list-none {
+    list-style: none;
+    padding: 0;
+}
+
+.smart-vault-border-bottom {
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.smart-vault-overflow-auto {
+    overflow-y: auto;
+}
+
+.smart-vault-full-height {
+    height: 100%;
+}
+
+.smart-vault-pointer {
+    cursor: pointer;
+}
+
+.smart-vault-width-full {
+    width: 100%;
+}
+
+.smart-vault-align-start {
+    align-items: flex-start;
+}
+
+.smart-vault-space-between {
+    justify-content: space-between;
+}
+
+.smart-vault-border-radius-4 {
+    border-radius: 4px;
+}
+
+.smart-vault-bg-alt {
+    background-color: var(--background-primary-alt);
+}
+
+.smart-vault-label-tag {
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.smart-vault-margin-top-20 {
+    margin-top: 20px;
+}
+
+.smart-vault-full-width {
+    width: 100%;
+}
+
+.smart-vault-underline {
+    text-decoration: underline;
+}
+
+/* --- UI Improvements (Phase 2 Polish) --- */
+
+/* 1. Structure Suggestions: Fix inconsistent button sizes */
+.smart-vault-structure-item .smart-vault-mini-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    margin-left: 8px;
+}
+
+/* 2. Flashcards: Better formatting */
+.smart-vault-flashcard {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.flashcard-q {
+    font-weight: 600;
+    color: var(--text-normal);
+    border-bottom: 1px dashed var(--background-modifier-border);
+    padding-bottom: 8px;
+    margin-right: 40px;
+    /* Space for button */
+}
+
+.flashcard-q::before {
+    content: "Q: ";
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.flashcard-a {
+    color: var(--text-normal);
+    line-height: 1.5;
+    font-size: 0.95em;
+}
+
+.flashcard-a::before {
+    content: "A: ";
+    color: var(--text-muted);
+}
+
+.smart-vault-flashcard-add-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+/* 3. Organization: Less monotonous suggestions */
+.suggestion-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.suggestion-header {
+    background-color: var(--background-secondary-alt);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-left: 3px solid var(--interactive-accent);
+}
+
+.suggestion-label {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.suggestion-value {
+    font-family: var(--font-monospace);
+    color: var(--text-accent);
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.suggestion-reason {
+    padding: 8px 12px;
+    background-color: var(--background-primary-alt);
+    border-radius: 6px;
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.9em;
+    line-height: 1.4;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.suggestion-confidence {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.confidence-meter {
+    flex-grow: 1;
+    height: 6px;
+    background-color: var(--background-modifier-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background-color: var(--interactive-accent);
+    border-radius: 3px;
+}
+
+.suggestion-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}

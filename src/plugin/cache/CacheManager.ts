@@ -1,5 +1,7 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, Notice } from 'obsidian';
 import type { KeywordCache, SuggestionCache } from './types';
+import * as wasmNamespace from '../../../pkg/obsidian_smart_vault';
+import type { LinkSuggestionView } from '../../ui/LinkSuggestionView';
 
 /**
  * Manages all cache operations for the Smart Vault plugin.
@@ -13,7 +15,7 @@ import type { KeywordCache, SuggestionCache } from './types';
 export class CacheManager {
     private app: App;
     private manifestDir: string;
-    private smartVault: any;
+    private smartVault: wasmNamespace.SmartVault;
     private saveEmbeddingsTimeout: number | null = null;
     private saveCacheIndexTimeout: number | null = null;
     private saveQueue: Promise<void> = Promise.resolve();
@@ -23,7 +25,7 @@ export class CacheManager {
     constructor(
         app: App,
         cacheDir: string, // Renamed from manifestDir to be generic
-        smartVault: any,
+        smartVault: wasmNamespace.SmartVault,
         // These Maps are kept for backward compatibility but now sync with Rust
         _fileModificationTimes: Map<string, number>,
         _keywordModificationTimes: Map<string, number>,
@@ -45,7 +47,7 @@ export class CacheManager {
             // @ts-ignore
             if (!(await adapter.exists(this.manifestDir))) {
                 if (this.debugMode) {
-                    console.log(`[DEBUG] Creating cache directory: ${this.manifestDir}`);
+                    console.debug(`[DEBUG] Creating cache directory: ${this.manifestDir}`);
                 }
                 // @ts-ignore
                 await adapter.mkdir(this.manifestDir);
@@ -157,7 +159,7 @@ export class CacheManager {
             const exists = await adapter.exists(cachePath);
             if (!exists) {
                 if (this.debugMode) {
-                    console.log('[DEBUG] No cache index found, will migrate from legacy files');
+                    console.debug('[DEBUG] No cache index found, will migrate from legacy files');
                 }
                 // Try to migrate from legacy files
                 await this.migrateLegacyCaches();
@@ -173,7 +175,7 @@ export class CacheManager {
 
             const loadTime = (performance.now() - startTime).toFixed(2);
             if (this.debugMode) {
-                console.log(`[DEBUG] Loaded cache index in ${loadTime}ms`);
+                console.debug(`[DEBUG] Loaded cache index in ${loadTime}ms`);
             }
         } catch (error) {
             console.error('Error loading cache index:', error);
@@ -185,7 +187,7 @@ export class CacheManager {
     /**
      * Save the unified cache index to binary file.
      */
-    async saveCacheIndex() {
+    saveCacheIndex() {
         // Debounce saves
         if (this.saveCacheIndexTimeout !== null) {
             clearTimeout(this.saveCacheIndexTimeout);
@@ -209,7 +211,7 @@ export class CacheManager {
                 const sizeKB = (arrayBuffer.byteLength / 1024).toFixed(2);
 
                 if (this.debugMode) {
-                    console.log(`[DEBUG] Saved cache index in ${saveTime}ms (${sizeKB} KB)`);
+                    console.debug(`[DEBUG] Saved cache index in ${saveTime}ms (${sizeKB} KB)`);
                 }
             } catch (error) {
                 console.error('Error saving cache index:', error);
@@ -222,7 +224,7 @@ export class CacheManager {
      */
     private async migrateLegacyCaches() {
         if (this.debugMode) {
-            console.log('[DEBUG] Attempting to migrate legacy cache files...');
+            console.debug('[DEBUG] Attempting to migrate legacy cache files...');
         }
 
         // Migrate ignored suggestions
@@ -235,7 +237,7 @@ export class CacheManager {
         await this.saveCacheIndex();
 
         if (this.debugMode) {
-            console.log('[DEBUG] Legacy cache migration complete');
+            console.debug('[DEBUG] Legacy cache migration complete');
         }
     }
 
@@ -261,14 +263,14 @@ export class CacheManager {
             }
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Migrated ${count} ignored suggestions from legacy file`);
+                console.debug(`[DEBUG] Migrated ${count} ignored suggestions from legacy file`);
             }
 
             // Optionally remove the legacy file
             // await adapter.remove(cachePath);
         } catch (error) {
             if (this.debugMode) {
-                console.log('[DEBUG] No legacy ignored suggestions to migrate:', error);
+                console.debug('[DEBUG] No legacy ignored suggestions to migrate:', error);
             }
         }
     }
@@ -295,11 +297,11 @@ export class CacheManager {
             }
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Migrated ${count} insertion cache entries from legacy file`);
+                console.debug(`[DEBUG] Migrated ${count} insertion cache entries from legacy file`);
             }
         } catch (error) {
             if (this.debugMode) {
-                console.log('[DEBUG] No legacy insertion cache to migrate:', error);
+                console.debug('[DEBUG] No legacy insertion cache to migrate:', error);
             }
         }
     }
@@ -354,7 +356,7 @@ export class CacheManager {
         }
 
         if (this.debugMode) {
-            console.log(`[DEBUG] Loaded ${filesLoaded} file contents for deduplication`);
+            console.debug(`[DEBUG] Loaded ${filesLoaded} file contents for deduplication`);
         }
     }
 
@@ -366,7 +368,7 @@ export class CacheManager {
             const adapter = this.app.vault.adapter;
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Attempting to load embeddings (binary preferred)`);
+                console.debug(`[DEBUG] Attempting to load embeddings (binary preferred)`);
             }
 
             // @ts-ignore - exists method may not be typed
@@ -388,7 +390,7 @@ export class CacheManager {
                     const loadTime = (performance.now() - startTime).toFixed(2);
 
                     if (this.debugMode) {
-                        console.log(`[DEBUG] Loaded ${loadedCount} embeddings from binary cache in ${loadTime}ms`);
+                        console.debug(`[DEBUG] Loaded ${loadedCount} embeddings from binary cache in ${loadTime}ms`);
                     }
 
                     // Mark all loaded embeddings as processed with current file mtimes
@@ -400,7 +402,7 @@ export class CacheManager {
                     }
 
                     if (this.debugMode) {
-                        console.log(`Loaded saved embeddings (binary format, ${loadTime}ms)`);
+                        console.debug(`Loaded saved embeddings (binary format, ${loadTime}ms)`);
                     }
                     return;
                 } catch (error) {
@@ -420,7 +422,7 @@ export class CacheManager {
                 const oldExists = await adapter.exists(oldPath);
                 if (oldExists) {
                     if (this.debugMode) {
-                        console.log('Migrating embeddings from old location...');
+                        console.debug('Migrating embeddings from old location...');
                     }
                     loadPath = oldPath;
                     jsonExists = true;
@@ -431,8 +433,8 @@ export class CacheManager {
                 const startTime = performance.now();
                 const embeddingsJson = await adapter.read(loadPath);
                 if (this.debugMode) {
-                    console.log(`[DEBUG] Loading embeddings from JSON: ${loadPath}`);
-                    console.log(`[DEBUG] Embeddings JSON length: ${embeddingsJson.length} chars`);
+                    console.debug(`[DEBUG] Loading embeddings from JSON: ${loadPath}`);
+                    console.debug(`[DEBUG] Embeddings JSON length: ${embeddingsJson.length} chars`);
                 }
 
                 this.smartVault.deserialize_embeddings(embeddingsJson);
@@ -440,14 +442,14 @@ export class CacheManager {
                 const loadedCount = this.smartVault.get_embedding_count();
                 const loadTime = (performance.now() - startTime).toFixed(2);
                 if (this.debugMode) {
-                    console.log(`[DEBUG] Loaded ${loadedCount} file embeddings from disk in ${loadTime}ms`);
+                    console.debug(`[DEBUG] Loaded ${loadedCount} file embeddings from disk in ${loadTime}ms`);
                 }
 
                 // Mark embeddings as processed
                 const parsed = JSON.parse(embeddingsJson);
                 const paths = Object.keys(parsed);
                 if (this.debugMode) {
-                    console.log(`[DEBUG] Embeddings JSON contains ${paths.length} file entries`);
+                    console.debug(`[DEBUG] Embeddings JSON contains ${paths.length} file entries`);
                 }
 
                 for (const path of paths) {
@@ -458,17 +460,17 @@ export class CacheManager {
                 }
 
                 if (this.debugMode) {
-                    console.log(`Loaded saved embeddings (JSON format, ${loadTime}ms) - will migrate to binary on next save`);
+                    console.debug(`Loaded saved embeddings (JSON format, ${loadTime}ms) - will migrate to binary on next save`);
                 }
             }
         } catch (error) {
             if (this.debugMode) {
-                console.log('No saved embeddings found or error loading:', error);
+                console.debug('No saved embeddings found or error loading:', error);
             }
         }
     }
 
-    async saveEmbeddings() {
+    saveEmbeddings() {
         // Debounce saves - reduced from 3s to 1s (binary format is much faster)
         if (this.saveEmbeddingsTimeout !== null) {
             clearTimeout(this.saveEmbeddingsTimeout);
@@ -479,7 +481,7 @@ export class CacheManager {
 
             if (this.saveInProgress) {
                 if (this.debugMode) {
-                    console.log('[DEBUG] Save already in progress, skipping');
+                    console.debug('[DEBUG] Save already in progress, skipping');
                 }
                 return;
             }
@@ -492,8 +494,8 @@ export class CacheManager {
 
                     try {
                         if (this.debugMode) {
-                            console.log(`[DEBUG] Attempting to save to: ${binaryPath}`);
-                            console.log(`[DEBUG] manifest.dir = ${this.manifestDir}`);
+                            console.debug(`[DEBUG] Attempting to save to: ${binaryPath}`);
+                            console.debug(`[DEBUG] manifest.dir = ${this.manifestDir}`);
                         }
 
                         const maxRetries = 10;
@@ -507,7 +509,7 @@ export class CacheManager {
                                 const dirExists = await this.app.vault.adapter.exists(dirPath);
                                 if (!dirExists) {
                                     if (this.debugMode) {
-                                        console.log(`[DEBUG] Creating directory: ${dirPath}`);
+                                        console.debug(`[DEBUG] Creating directory: ${dirPath}`);
                                     }
                                     // @ts-ignore
                                     await this.app.vault.adapter.mkdir(dirPath);
@@ -528,14 +530,14 @@ export class CacheManager {
                                 const sizeKB = (arrayBuffer.byteLength / 1024).toFixed(2);
 
                                 if (this.debugMode) {
-                                    console.log(`[DEBUG] Saved embeddings to binary cache in ${saveTime}ms (${sizeKB} KB, attempt ${attempt})`);
+                                    console.debug(`[DEBUG] Saved embeddings to binary cache in ${saveTime}ms (${sizeKB} KB, attempt ${attempt})`);
                                 } else if (attempt > 1) {
                                     if (this.debugMode) {
-                                        console.log(`Saved embeddings to disk (after ${attempt} attempts, ${saveTime}ms, ${sizeKB} KB)`);
+                                        console.debug(`Saved embeddings to disk (after ${attempt} attempts, ${saveTime}ms, ${sizeKB} KB)`);
                                     }
                                 } else {
                                     if (this.debugMode) {
-                                        console.log(`Saved embeddings to disk (${saveTime}ms, ${sizeKB} KB)`);
+                                        console.debug(`Saved embeddings to disk (${saveTime}ms, ${sizeKB} KB)`);
                                     }
                                 }
 
@@ -548,10 +550,10 @@ export class CacheManager {
                                 if (attempt < maxRetries) {
                                     const delay = Math.min(2000 * Math.pow(2, attempt - 1), 30000);
                                     if (this.debugMode) {
-                                        console.log(`[DEBUG] Save attempt ${attempt}/${maxRetries} failed: ${error}. Retrying in ${delay}ms...`);
+                                        console.debug(`[DEBUG] Save attempt ${attempt}/${maxRetries} failed: ${error}. Retrying in ${delay}ms...`);
                                     } else if (attempt === 1) {
                                         if (this.debugMode) {
-                                            console.log('File locked by Nextcloud, retrying...');
+                                            console.debug('File locked by Nextcloud, retrying...');
                                         }
                                     }
                                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -564,7 +566,7 @@ export class CacheManager {
                                 console.error('Failed to save embeddings after', maxRetries, 'attempts:', lastError);
                             } else {
                                 if (this.debugMode) {
-                                    console.log('Could not save embeddings (file locked by sync), will retry on next change');
+                                    console.debug('Could not save embeddings (file locked by sync), will retry on next change');
                                 }
                             }
                         }
@@ -581,7 +583,7 @@ export class CacheManager {
 
     async clearEmbeddings() {
         try {
-            this.smartVault = new (this.smartVault.constructor)();
+            this.smartVault = new wasmNamespace.SmartVault();
 
             // Clear caches in Rust
             this.smartVault.clear_all_caches();
@@ -620,7 +622,7 @@ export class CacheManager {
             }
 
             if (this.debugMode) {
-                console.log('Cleared embeddings cache (both JSON and binary formats) and cache index');
+                console.debug('Cleared embeddings cache (both JSON and binary formats) and cache index');
             }
         } catch (error) {
             console.error('Error clearing embeddings:', error);
@@ -637,7 +639,7 @@ export class CacheManager {
             const exists = await adapter.exists(keywordsPath);
             if (!exists) {
                 if (this.debugMode) {
-                    console.log('[DEBUG] No keywords cache found');
+                    console.debug('[DEBUG] No keywords cache found');
                 }
                 return;
             }
@@ -670,7 +672,7 @@ export class CacheManager {
             }
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Loaded ${totalKeywords} keywords from cache (${staleCount} stale entries skipped)`);
+                console.debug(`[DEBUG] Loaded ${totalKeywords} keywords from cache (${staleCount} stale entries skipped)`);
             }
         } catch (error) {
             console.error('Error loading keywords cache:', error);
@@ -702,7 +704,7 @@ export class CacheManager {
             await adapter.write(keywordsPath, keywordsJson);
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Saved ${Object.keys(keywordsObj).length} files with ${totalKeywords} total keywords to disk`);
+                console.debug(`[DEBUG] Saved ${Object.keys(keywordsObj).length} files with ${totalKeywords} total keywords to disk`);
             }
         } catch (error) {
             console.error('Error saving keywords cache:', error);
@@ -710,10 +712,10 @@ export class CacheManager {
     }
 
     // Suggestions cache
-    async loadSuggestions(suggestionView: any) {
+    async loadSuggestions(suggestionView: LinkSuggestionView | null) {
         if (!suggestionView) {
             if (this.debugMode) {
-                console.log('[DEBUG] loadSuggestions: No suggestionView provided');
+                console.debug('[DEBUG] loadSuggestions: No suggestionView provided');
             }
             return;
         }
@@ -723,29 +725,29 @@ export class CacheManager {
             const adapter = this.app.vault.adapter;
 
             if (this.debugMode) {
-                console.log(`[DEBUG] loadSuggestions: Checking for cache at ${suggestionsPath}`);
+                console.debug(`[DEBUG] loadSuggestions: Checking for cache at ${suggestionsPath}`);
             }
 
             // @ts-ignore
             const exists = await adapter.exists(suggestionsPath);
             if (!exists) {
                 if (this.debugMode) {
-                    console.log('[DEBUG] loadSuggestions: No suggestions cache found at path');
+                    console.debug('[DEBUG] loadSuggestions: No suggestions cache found at path');
                 }
                 return;
             }
 
             if (this.debugMode) {
-                console.log('[DEBUG] loadSuggestions: Cache file exists, reading...');
+                console.debug('[DEBUG] loadSuggestions: Cache file exists, reading...');
             }
             const suggestionsJson = await adapter.read(suggestionsPath);
             if (this.debugMode) {
-                console.log(`[DEBUG] loadSuggestions: Read ${suggestionsJson.length} chars, parsing JSON...`);
+                console.debug(`[DEBUG] loadSuggestions: Read ${suggestionsJson.length} chars, parsing JSON...`);
             }
 
             const parsed: SuggestionCache = JSON.parse(suggestionsJson);
             if (this.debugMode) {
-                console.log(`[DEBUG] loadSuggestions: Parsed ${Object.keys(parsed).length} files from JSON`);
+                console.debug(`[DEBUG] loadSuggestions: Parsed ${Object.keys(parsed).length} files from JSON`);
             }
 
             let totalSuggestions = 0;
@@ -755,17 +757,17 @@ export class CacheManager {
             }
 
             if (this.debugMode) {
-                console.log(`[DEBUG] ✅ Loaded ${Object.keys(parsed).length} files from suggestions cache (${totalSuggestions} total suggestions)`);
+                console.debug(`[DEBUG] ✅ Loaded ${Object.keys(parsed).length} files from suggestions cache (${totalSuggestions} total suggestions)`);
             }
         } catch (error) {
             console.error('[ERROR] Error loading suggestions cache:', error);
         }
     }
 
-    async saveSuggestions(suggestionView: any) {
+    async saveSuggestions(suggestionView: LinkSuggestionView | null) {
         if (!suggestionView) {
             if (this.debugMode) {
-                console.log('[DEBUG] saveSuggestions: No suggestionView, returning early');
+                console.debug('[DEBUG] saveSuggestions: No suggestionView, returning early');
             }
             return;
         }
@@ -782,20 +784,41 @@ export class CacheManager {
             }
 
             if (this.debugMode) {
-                console.log(`[DEBUG] saveSuggestions: Converting ${suggestionView.allDocumentSuggestions.size} files (${totalSuggestions} total suggestions) to JSON`);
+                console.debug(`[DEBUG] saveSuggestions: Converting ${suggestionView.allDocumentSuggestions.size} files (${totalSuggestions} total suggestions) to JSON`);
             }
 
             const suggestionsJson = JSON.stringify(suggestionsObj, null, 2);
             if (this.debugMode) {
-                console.log(`[DEBUG] saveSuggestions: Writing to ${suggestionsPath}`);
+                console.debug(`[DEBUG] saveSuggestions: Writing to ${suggestionsPath}`);
             }
             await adapter.write(suggestionsPath, suggestionsJson);
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Saved ${Object.keys(suggestionsObj).length} files with ${totalSuggestions} total suggestions to disk`);
+                console.debug(`[DEBUG] Saved ${Object.keys(suggestionsObj).length} files with ${totalSuggestions} total suggestions to disk`);
             }
         } catch (error) {
             console.error('Error saving suggestions cache:', error);
+        }
+    }
+
+    /**
+     * Clear all caches (embeddings, keywords, suggestions, insertions)
+     */
+    async clearAllCaches() {
+        const notice = new Notice('Clearing all caches...', 0);
+        try {
+            // First clear in memory
+            this.smartVault.clear_all_caches();
+
+            // Then clear files
+            await this.clearEmbeddings();
+
+            notice.setMessage('Caches cleared successfully');
+            setTimeout(() => notice.hide(), 2000);
+        } catch (error) {
+            notice.hide();
+            console.error('Error clearing all caches:', error);
+            new Notice('Failed to clear caches');
         }
     }
 
@@ -807,23 +830,36 @@ export class CacheManager {
         // Insertion cache is now part of the unified cache index
         // Migration happens in loadCacheIndex()
         if (this.debugMode) {
-            console.log('[DEBUG] Insertion cache is now managed by Rust CacheIndex');
+            console.debug('[DEBUG] Insertion cache is now managed by Rust CacheIndex');
         }
+        await Promise.resolve();
     }
 
-    async saveInsertionCache() {
+    saveInsertionCache() {
         // Insertion cache is now part of the unified cache index
-        await this.saveCacheIndex();
-    }
-
-    getCachedInsertion(filePath: string, linkTitle: string): any | null {
-        const result = this.smartVault.get_cached_insertion(filePath, linkTitle);
-        return result !== null && result !== undefined ? result : null;
-    }
-
-    cacheInsertion(filePath: string, linkTitle: string, result: any) {
-        this.smartVault.cache_insertion(filePath, linkTitle, JSON.stringify(result));
         this.saveCacheIndex();
+    }
+
+    getCachedInsertion(filePath: string, linkTitle: string): import('./types').InsertionResult | null {
+        try {
+            const resultJson = this.smartVault.get_cached_insertion(filePath, linkTitle);
+            if (resultJson) {
+                return JSON.parse(resultJson);
+            }
+        } catch (e) {
+            // Silently fail, not a critical cache
+        }
+        return null;
+    }
+
+    cacheInsertion(filePath: string, linkTitle: string, result: import('./types').InsertionResult) {
+        try {
+            const resultJson = JSON.stringify(result);
+            this.smartVault.cache_insertion(filePath, linkTitle, resultJson);
+            this.saveCacheIndex();
+        } catch (e) {
+            // Silently fail
+        }
     }
 
     invalidateInsertionCacheForFile(filePath: string): number {
@@ -847,11 +883,12 @@ export class CacheManager {
         if (this.debugMode) {
             console.log('[DEBUG] Ignored suggestions are now managed by Rust CacheIndex');
         }
+        await Promise.resolve();
     }
 
-    async saveIgnoredSuggestions() {
+    saveIgnoredSuggestions() {
         // Ignored suggestions are now part of the unified cache index
-        await this.saveCacheIndex();
+        this.saveCacheIndex();
     }
 
     isIgnored(sourceFile: string, targetFile: string): boolean {
@@ -875,7 +912,7 @@ export class CacheManager {
         }
         // The Rust function returns objects with source_file, target_file, timestamp
         // Map to the expected TypeScript format
-        return ignored.map((item: any) => ({
+        return ignored.map((item: { source_file: string; target_file: string; timestamp: number }) => ({
             sourceFile: item.source_file,
             targetFile: item.target_file,
             timestamp: item.timestamp
@@ -892,7 +929,7 @@ export class CacheManager {
     // ============================================================
 
     async exportCache() {
-        const exportPath = `${this.app.vault.adapter.getName()}/smart-vault-export.json`;
+        const _exportPath = `${this.app.vault.adapter.getName()}/smart-vault-export.json`;
         // Since we cannot easily get absolute path of vault root depending on adapter,
         // we'll just write to the root of the vault with a fixed name.
         const targetPath = 'smart-vault-export.json';

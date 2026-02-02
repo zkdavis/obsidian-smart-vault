@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownView, Notice, Editor } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, Notice, Editor, Modal } from 'obsidian';
 import type SmartVaultPlugin from '../plugin/SmartVaultPlugin';
 import { ChatTab } from './tabs/ChatTab';
 import { FormattingTab } from './tabs/FormattingTab';
@@ -9,16 +9,38 @@ import { BaseTab } from './tabs/BaseTab';
 export const VIEW_TYPE_LINK_SUGGESTIONS = 'smart-vault-link-suggestions';
 
 /**
+ * Interface for a link suggestion
+ */
+export interface LinkSuggestion {
+    path: string;
+    title: string;
+    similarity: number;
+    context: string;
+    llm_score?: number;
+    llm_reason?: string;
+}
+
+/**
+ * Interface for insertion point
+ */
+interface InsertionPoint {
+    line: number;
+    ch: number;
+    originalText: string;
+    linkText: string;
+    useSeeAlso: boolean;
+    reason?: string;
+    originalLine?: string; // for preview restoration
+}
+
+/**
  * Main UI panel for displaying link suggestions.
- * Renders current file suggestions, other document suggestions,
- * handles insertion point calculation (rule-based and LLM-powered),
- * and manages link insertion with preview functionality.
  */
 export class LinkSuggestionView extends ItemView {
     plugin: SmartVaultPlugin;
     currentFile: TFile | null = null;
-    currentSuggestions: any[] = [];
-    allDocumentSuggestions: Map<string, any[]> = new Map();
+    currentSuggestions: LinkSuggestion[] = [];
+    allDocumentSuggestions: Map<string, LinkSuggestion[]> = new Map();
     // Track documents where LLM reranking failed (for visual warning)
     llmFailedDocuments: Map<string, string> = new Map();
     // Track LLM scanning progress
@@ -65,7 +87,9 @@ export class LinkSuggestionView extends ItemView {
         try {
             // Check if plugin is initialized
             if (!this.plugin.smartVault) {
-                console.log('Smart Vault not initialized yet, skipping update');
+                if (this.plugin.settings.debugMode) {
+                    console.debug('Smart Vault not initialized yet, skipping update');
+                }
                 return;
             }
 
@@ -77,20 +101,20 @@ export class LinkSuggestionView extends ItemView {
             // If we have cached suggestions (even if empty), use them
             if (cachedSuggestions !== undefined) {
                 if (this.plugin.settings.debugMode) {
-                    console.log(`[DEBUG] Using cached suggestions for ${file.path} (${cachedSuggestions.length} suggestions)`);
+                    console.debug(`[DEBUG] Using cached suggestions for ${file.path} (${cachedSuggestions.length} suggestions)`);
                 }
                 this.setSuggestions(cachedSuggestions, file);
                 return;
             }
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] No cached suggestions for ${file.path}, will check for embedding`);
+                console.debug(`[DEBUG] No cached suggestions for ${file.path}, will check for embedding`);
             }
 
             // No cache entry - check if we have an embedding and regenerate suggestions
             if (this.plugin.smartVault.has_embedding(file.path)) {
                 if (this.plugin.settings.debugMode) {
-                    console.log(`Generating suggestions from existing embedding for ${file.path}`);
+                    console.debug(`Generating suggestions from existing embedding for ${file.path}`);
                 }
 
                 // Use the existing embedding instead of regenerating
@@ -100,7 +124,7 @@ export class LinkSuggestionView extends ItemView {
                 const skipLLM = this.plugin.settings.manualLLMRerank;
 
                 if (this.plugin.settings.debugMode && skipLLM) {
-                    console.log(`[DEBUG] Manual Rerank ON: Skipping auto-LLM rerank for ${file.path}`);
+                    console.debug(`[DEBUG] Manual Rerank ON: Skipping auto-LLM rerank for ${file.path}`);
                 }
 
                 const suggestions = await this.plugin.getSuggestionsForFile(file, content, Array.from(embedding), skipLLM);
@@ -117,7 +141,7 @@ export class LinkSuggestionView extends ItemView {
 
             // No embedding exists - just render empty state
             if (this.plugin.settings.debugMode) {
-                console.log(`No embedding found for ${file.path}`);
+                console.debug(`No embedding found for ${file.path}`);
             }
             this.setSuggestions([], file);
         } catch (error) {
@@ -125,7 +149,7 @@ export class LinkSuggestionView extends ItemView {
         }
     }
 
-    setSuggestions(suggestions: any[], file: TFile) {
+    setSuggestions(suggestions: LinkSuggestion[], file: TFile) {
         this.currentSuggestions = suggestions;
         this.currentFile = file;
         this.render();
@@ -252,7 +276,7 @@ export class LinkSuggestionView extends ItemView {
 
         // Header with title and action buttons
         const header = container.createDiv({ cls: 'suggestion-panel-header' });
-        header.createEl('h4', { text: 'Link Suggestions' });
+        header.createEl('h4', { text: 'Link suggestions' });
 
         const actionsDiv = header.createDiv({ cls: 'suggestion-header-actions' });
 
@@ -272,7 +296,7 @@ export class LinkSuggestionView extends ItemView {
                 const rerankBtn = actionsDiv.createEl('button', {
                     text: '✨ AI',
                     cls: 'suggestion-button suggestion-mini-btn',
-                    attr: { title: 'Manually trigger LLM Reranking' }
+                    attr: { title: 'Manually trigger LLM reranking' }
                 });
                 rerankBtn.onclick = async () => {
                     if (!this.currentFile) return;
@@ -298,7 +322,7 @@ export class LinkSuggestionView extends ItemView {
             const refreshButton = actionsDiv.createEl('button', {
                 text: '↻',
                 cls: 'suggestion-button suggestion-mini-btn',
-                attr: { title: 'Refresh embeddings (Vector only)' }
+                attr: { title: 'Refresh embeddings (vector only)' }
             });
             refreshButton.onclick = async () => {
                 if (this.plugin.settings.debugMode) {
@@ -370,8 +394,7 @@ export class LinkSuggestionView extends ItemView {
             });
             const retryBtn = warningDiv.createEl('button', {
                 text: '↻ Retry',
-                cls: 'suggestion-button-secondary',
-                attr: { style: 'margin-left: 8px; padding: 2px 8px; font-size: 11px;' }
+                cls: 'suggestion-button-secondary smart-vault-label-tag'
             });
             retryBtn.onclick = async () => {
                 retryBtn.disabled = true;
@@ -429,7 +452,7 @@ export class LinkSuggestionView extends ItemView {
                         await this.plugin.scanVault();
                     } finally {
                         scanButton.disabled = false;
-                        scanButton.textContent = 'Scan Vault Now';
+                        scanButton.textContent = 'Scan vault now';
                     }
                 };
             } else {
@@ -439,8 +462,8 @@ export class LinkSuggestionView extends ItemView {
             const list = currentSection.createEl('div', { cls: 'smart-vault-suggestion-list' });
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Rendering ${this.currentSuggestions.length} suggestions (max: ${this.plugin.settings.maxSuggestions})`);
-                console.log(`[DEBUG] Current suggestions:`, this.currentSuggestions);
+                console.debug(`[DEBUG] Rendering ${this.currentSuggestions.length} suggestions (max: ${this.plugin.settings.maxSuggestions})`);
+                console.debug(`[DEBUG] Current suggestions:`, this.currentSuggestions);
             }
 
             let renderedCount = 0;
@@ -448,18 +471,18 @@ export class LinkSuggestionView extends ItemView {
             const filteredSuggestions = this.currentSuggestions.filter(suggestion => {
                 const isIgnored = this.plugin.cacheManager!.isIgnored(this.currentFile!.path, suggestion.path);
                 if (isIgnored && this.plugin.settings.debugMode) {
-                    console.log(`[DEBUG] Filtering out ignored suggestion: ${suggestion.title}`);
+                    console.debug(`[DEBUG] Filtering out ignored suggestion: ${suggestion.title}`);
                 }
                 return !isIgnored;
             });
 
             // Track if we've shown the embedding-only divider
             let shownEmbeddingDivider = false;
-            let hasLLMSuggestions = filteredSuggestions.some(s => s.llm_score !== undefined);
+            const hasLLMSuggestions = filteredSuggestions.some(s => s.llm_score !== undefined);
 
             filteredSuggestions.slice(0, this.plugin.settings.maxSuggestions).forEach((suggestion, index) => {
                 if (this.plugin.settings.debugMode) {
-                    console.log(`[DEBUG] Rendering suggestion ${index + 1}: ${suggestion.title}, similarity=${suggestion.similarity}, llm_score=${suggestion.llm_score}`);
+                    console.debug(`[DEBUG] Rendering suggestion ${index + 1}: ${suggestion.title}, similarity=${suggestion.similarity}, llm_score=${suggestion.llm_score}`);
                 }
 
                 // Add section divider when transitioning from LLM-ranked to embedding-only
@@ -474,13 +497,13 @@ export class LinkSuggestionView extends ItemView {
             });
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Filtered ${this.currentSuggestions.length - filteredSuggestions.length} ignored, rendered ${renderedCount} suggestions to DOM`);
+                console.debug(`[DEBUG] Filtered ${this.currentSuggestions.length - filteredSuggestions.length} ignored, rendered ${renderedCount} suggestions to DOM`);
             }
         }
 
         // Other documents with suggestions
         if (this.plugin.settings.debugMode) {
-            console.log(`[DEBUG] Rendering other documents section: allDocumentSuggestions.size=${this.allDocumentSuggestions.size}`);
+            console.debug(`[DEBUG] Rendering other documents section: allDocumentSuggestions.size=${this.allDocumentSuggestions.size}`);
         }
 
         if (this.allDocumentSuggestions.size > 0) {
@@ -496,7 +519,7 @@ export class LinkSuggestionView extends ItemView {
                 if (path === this.currentFile.path || suggestions.length === 0) continue;
 
                 if (this.plugin.settings.debugMode && count === 0) {
-                    console.log(`[DEBUG] Showing other doc: ${path} (${suggestions.length} suggestions)`);
+                    console.debug(`[DEBUG] Showing other doc: ${path} (${suggestions.length} suggestions)`);
                 }
 
                 const docItem = otherList.createDiv({ cls: 'other-doc-item' });
@@ -518,13 +541,13 @@ export class LinkSuggestionView extends ItemView {
         }
     }
 
-    renderSuggestionItem(container: HTMLElement, suggestion: any, targetFile: TFile) {
+    renderSuggestionItem(container: HTMLElement, suggestion: LinkSuggestion, targetFile: TFile) {
         // Only show suggestions above 60% confidence (0.6 threshold) or if LLM reranked
         // Note: Check if llm_score exists using !== undefined (not just !llm_score)
         // because a score of 0 is still a valid LLM score
         if (suggestion.similarity && suggestion.similarity < 0.6 && suggestion.llm_score === undefined) {
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Skipping render of '${suggestion.title}': similarity=${suggestion.similarity}, llm_score=${suggestion.llm_score}`);
+                console.debug(`[DEBUG] Skipping render of '${suggestion.title}': similarity=${suggestion.similarity}, llm_score=${suggestion.llm_score}`);
             }
             return;
         }
@@ -532,11 +555,10 @@ export class LinkSuggestionView extends ItemView {
         const item = container.createEl('div', { cls: 'smart-vault-suggestion-item' });
 
         const header = item.createEl('div', { cls: 'suggestion-header' });
-        const titleEl = header.createEl('strong', { text: suggestion.title });
-
-        // Add clickable link to open the suggested document
-        titleEl.style.cursor = 'pointer';
-        titleEl.style.textDecoration = 'underline';
+        const titleEl = header.createEl('strong', {
+            text: suggestion.title,
+            cls: 'smart-vault-pointer smart-vault-underline'
+        });
         titleEl.onclick = (e) => {
             e.stopPropagation();
             const file = this.app.vault.getAbstractFileByPath(suggestion.path);
@@ -566,7 +588,7 @@ export class LinkSuggestionView extends ItemView {
         // Button container for multiple buttons
         const buttonContainer = item.createEl('div', { cls: 'suggestion-buttons' });
 
-        const button = buttonContainer.createEl('button', { text: 'Insert Link', cls: 'suggestion-button' });
+        const button = buttonContainer.createEl('button', { text: 'Insert link', cls: 'suggestion-button' });
 
         const ignoreButton = buttonContainer.createEl('button', { text: '✕ Ignore', cls: 'suggestion-button-secondary' });
         ignoreButton.title = 'Hide this suggestion permanently';
@@ -579,7 +601,7 @@ export class LinkSuggestionView extends ItemView {
 
         let previewTimeout: number | null = null;
         let isShowingPreview = false;
-        let cachedInsertPoint: any = null;
+        let cachedInsertPoint: InsertionPoint | null = null;
 
         // Pre-calculate insertion point (fast, rule-based only)
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -592,7 +614,6 @@ export class LinkSuggestionView extends ItemView {
                 cachedInsertPoint = {
                     line: fallback.line,
                     ch: fallback.ch,
-                    length: fallback.replaceText.length,
                     originalText: fallback.replaceText,
                     linkText: linkText,
                     useSeeAlso: false
@@ -600,8 +621,8 @@ export class LinkSuggestionView extends ItemView {
                 // Show preview info in button title
                 button.title = `Will replace "${fallback.replaceText}" with "${linkText}"`;
             } else {
-                cachedInsertPoint = { useSeeAlso: true };
-                button.title = 'Will add to See Also section';
+                cachedInsertPoint = { line: -1, ch: -1, originalText: '', linkText: '', useSeeAlso: true };
+                button.title = 'Will add to see also section';
             }
         } else {
             button.title = 'Hover to preview, click to insert';
@@ -609,7 +630,8 @@ export class LinkSuggestionView extends ItemView {
 
         // Mouse enter - show preview immediately (no LLM call)
         button.onmouseenter = () => {
-            if (!cachedInsertPoint) return;
+            const previewPoint = cachedInsertPoint;
+            if (!previewPoint) return;
 
             previewTimeout = window.setTimeout(() => {
                 const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -618,31 +640,37 @@ export class LinkSuggestionView extends ItemView {
                 const editor = view.editor;
 
                 // Highlight and show the replacement
-                if (!cachedInsertPoint.useSeeAlso) {
-                    const line = editor.getLine(cachedInsertPoint.line);
-                    const before = line.substring(0, cachedInsertPoint.ch);
-                    const after = line.substring(cachedInsertPoint.ch + cachedInsertPoint.length);
-                    const previewLine = before + cachedInsertPoint.linkText + after;
+                if (!previewPoint.useSeeAlso) {
+                    const line = editor.getLine(previewPoint.line);
+                    const before = line.substring(0, previewPoint.ch);
+                    const after = line.substring(previewPoint.ch + previewPoint.originalText.length);
+                    const previewLine = before + previewPoint.linkText + after;
 
                     // Temporarily replace the line to show preview
                     editor.replaceRange(
                         previewLine,
-                        { line: cachedInsertPoint.line, ch: 0 },
-                        { line: cachedInsertPoint.line, ch: line.length }
+                        { line: previewPoint.line, ch: 0 },
+                        { line: previewPoint.line, ch: line.length }
                     );
 
                     // Select the inserted link
                     editor.setSelection(
-                        { line: cachedInsertPoint.line, ch: cachedInsertPoint.ch },
-                        { line: cachedInsertPoint.line, ch: cachedInsertPoint.ch + cachedInsertPoint.linkText.length }
+                        { line: previewPoint.line, ch: previewPoint.ch },
+                        { line: previewPoint.line, ch: previewPoint.ch + previewPoint.linkText.length }
                     );
+
+                    // Ensure preview is visible
+                    editor.scrollIntoView({
+                        from: { line: previewPoint.line, ch: previewPoint.ch },
+                        to: { line: previewPoint.line, ch: previewPoint.ch + previewPoint.linkText.length }
+                    });
 
                     isShowingPreview = true;
                     // Store original line so we can restore it
-                    cachedInsertPoint.originalLine = line;
+                    previewPoint.originalLine = line;
 
                     // Show what changed in button
-                    button.textContent = `"${cachedInsertPoint.originalText}" → "${cachedInsertPoint.linkText}"`;
+                    button.textContent = `"${previewPoint.originalText}" → "${previewPoint.linkText}"`;
                 } else {
                     // Show See Also preview
                     button.textContent = '→ See Also';
@@ -689,7 +717,7 @@ export class LinkSuggestionView extends ItemView {
             isShowingPreview = false;
 
             if (this.plugin.settings.debugMode) {
-                console.log('Insert link clicked for:', suggestion.title);
+                console.debug('Insert link clicked for:', suggestion.title);
             }
             await this.insertLink(suggestion.title, targetFile);
         };
@@ -701,8 +729,8 @@ export class LinkSuggestionView extends ItemView {
         const titleWords = titleLower.split(/\s+/).filter(w => w.length >= 4); // Only significant words
 
         if (this.plugin.settings.debugMode) {
-            console.log('Finding insertion point for:', linkTitle);
-            console.log('Title words to search:', titleWords);
+            console.debug('Finding insertion point for:', linkTitle);
+            console.debug('Title words to search:', titleWords);
         }
 
         // Strategy 1: Find exact phrase match to replace
@@ -722,7 +750,7 @@ export class LinkSuggestionView extends ItemView {
                 const afterMatch = line.substring(titleIndex + linkTitle.length);
 
                 if (this.plugin.settings.debugMode) {
-                    console.log(`Found exact phrase match at line ${lineIdx}: "${matchedText}"`);
+                    console.debug(`Found exact phrase match at line ${lineIdx}: "${matchedText}"`);
                 }
 
                 return {
@@ -736,8 +764,6 @@ export class LinkSuggestionView extends ItemView {
 
         // Strategy 2: Find individual significant words from the title
         // BUT only if it makes sense to replace (i.e., the matched word is the same as the link title)
-        // Example: text has "turbulence", link is "turbulence" -> OK to replace
-        // Example: text has "turbulence", link is "Kolmogorov turbulence" -> DO NOT replace inline, use See Also
         const isSingleWordTitle = titleWords.length === 1;
 
         if (isSingleWordTitle) {
@@ -758,7 +784,7 @@ export class LinkSuggestionView extends ItemView {
                     const afterMatch = line.substring(match.index + match[0].length);
 
                     if (this.plugin.settings.debugMode) {
-                        console.log(`Found word match at line ${lineIdx}: "${match[0]}" (single-word title: "${linkTitle}")`);
+                        console.debug(`Found word match at line ${lineIdx}: "${match[0]}" (single-word title: "${linkTitle}")`);
                     }
 
                     return {
@@ -770,12 +796,9 @@ export class LinkSuggestionView extends ItemView {
                 }
             }
         }
-        // For multi-word titles: Strategy 1 already handled exact phrase matches.
-        // If we get here, there's no good inline match, so we'll fall through to return null
-        // which will trigger "See Also" insertion
 
         if (this.plugin.settings.debugMode) {
-            console.log('No good inline insertion point found - will use See Also');
+            console.debug('No good inline insertion point found - will use See Also');
         }
         return null;
     }
@@ -849,7 +872,7 @@ export class LinkSuggestionView extends ItemView {
 
     async insertLink(title: string, targetFile: TFile) {
         if (this.plugin.settings.debugMode) {
-            console.log('insertLink called for:', title, 'target file:', targetFile.path);
+            console.debug('insertLink called for:', title, 'target file:', targetFile.path);
         }
 
         // Get the active view
@@ -858,7 +881,7 @@ export class LinkSuggestionView extends ItemView {
         // If no active view or wrong file, open the target file
         if (!view || view.file?.path !== targetFile.path) {
             if (this.plugin.settings.debugMode) {
-                console.log('Opening target file:', targetFile.path);
+                console.debug('Opening target file:', targetFile.path);
             }
             const leaf = this.app.workspace.getLeaf(false);
             await leaf.openFile(targetFile);
@@ -874,13 +897,13 @@ export class LinkSuggestionView extends ItemView {
         const editor = view.editor;
         const content = editor.getValue();
 
-        let insertPoint: any = null;
+        let insertPoint: InsertionPoint | null = null;
 
         // Try LLM-powered insertion first if enabled
         if (this.plugin.settings.enableSmartInsertion) {
             try {
                 if (this.plugin.settings.debugMode) {
-                    console.log('[DEBUG] Using LLM to find insertion point');
+                    console.debug('[DEBUG] Using LLM to find insertion point');
                 }
 
                 // Check cache first
@@ -889,22 +912,16 @@ export class LinkSuggestionView extends ItemView {
                     const cached = this.plugin.getCachedInsertion(currentFile.path, title);
                     if (cached) {
                         if (this.plugin.settings.debugMode) {
-                            console.log('[DEBUG] Using cached LLM insertion suggestion');
+                            console.debug('[DEBUG] Using cached LLM insertion suggestion');
                         }
                         // Use cached result
                         const llmResult = cached;
 
-                        // (Continue with cached result processing below)
                         if (llmResult && llmResult.phrase && llmResult.phrase !== null && llmResult.confidence > 0.5) {
                             const phrase = llmResult.phrase;
                             const lines = content.split('\n');
 
-                            if (this.plugin.settings.debugMode) {
-                                console.log(`[DEBUG] Searching for cached phrase: "${phrase}"`);
-                            }
-
                             // Find the phrase in the document
-                            let found = false;
                             for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
                                 const line = lines[lineIdx];
                                 let phraseIndex = line.indexOf(phrase);
@@ -916,31 +933,25 @@ export class LinkSuggestionView extends ItemView {
 
                                     if (phraseIndex !== -1) {
                                         const actualPhrase = line.substring(phraseIndex, phraseIndex + phrase.length);
-                                        const beforePhrase = line.substring(0, phraseIndex);
-                                        const afterPhrase = line.substring(phraseIndex + actualPhrase.length);
-
                                         insertPoint = {
                                             line: lineIdx,
                                             ch: phraseIndex,
-                                            replaceText: actualPhrase,
-                                            newText: `${beforePhrase}[[${title}]]${afterPhrase}`,
+                                            originalText: actualPhrase,
+                                            linkText: `[[${title}]]`,
+                                            useSeeAlso: false,
                                             reason: llmResult.reason
                                         };
-                                        found = true;
                                         break;
                                     }
                                 } else {
-                                    const beforePhrase = line.substring(0, phraseIndex);
-                                    const afterPhrase = line.substring(phraseIndex + phrase.length);
-
                                     insertPoint = {
                                         line: lineIdx,
                                         ch: phraseIndex,
-                                        replaceText: phrase,
-                                        newText: `${beforePhrase}[[${title}]]${afterPhrase}`,
+                                        originalText: phrase,
+                                        linkText: `[[${title}]]`,
+                                        useSeeAlso: false,
                                         reason: llmResult.reason
                                     };
-                                    found = true;
                                     break;
                                 }
                             }
@@ -952,7 +963,7 @@ export class LinkSuggestionView extends ItemView {
                 if (!insertPoint) {
                     // Get context about the link from suggestions
                     const suggestions = this.allDocumentSuggestions.get(targetFile.path) || [];
-                    const linkSuggestion = suggestions.find((s: any) => s.title === title);
+                    const linkSuggestion = suggestions.find((s) => s.title === title);
                     const linkContext = linkSuggestion?.context || 'Related document';
 
                     const llmResult = await this.plugin.wasmModule.suggest_insertion_points_with_llm(
@@ -971,98 +982,71 @@ export class LinkSuggestionView extends ItemView {
                         this.plugin.cacheInsertion(currentFile.path, title, llmResult);
                     }
 
-                    if (this.plugin.settings.debugMode) {
-                        console.log('[DEBUG] LLM insertion suggestion:', llmResult);
-                        console.log('[DEBUG] Phrase to find:', llmResult?.phrase);
-                        console.log('[DEBUG] Confidence:', llmResult?.confidence);
-                        console.log('[DEBUG] Reason:', llmResult?.reason);
-                    }
-
                     // Parse LLM response
                     if (llmResult && llmResult.phrase && llmResult.phrase !== null && llmResult.confidence > 0.5) {
                         const phrase = llmResult.phrase;
                         const lines = content.split('\n');
 
-                        if (this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] Searching for phrase: "${phrase}"`);
-                        }
-
-                        // Find the phrase in the document (case-sensitive first, then case-insensitive)
+                        // Find the phrase in the document
                         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
                             const line = lines[lineIdx];
                             let phraseIndex = line.indexOf(phrase);
 
-                            // Try case-insensitive if case-sensitive didn't work
                             if (phraseIndex === -1) {
                                 const lineLower = line.toLowerCase();
                                 const phraseLower = phrase.toLowerCase();
                                 phraseIndex = lineLower.indexOf(phraseLower);
 
                                 if (phraseIndex !== -1) {
-                                    // Found case-insensitive match - extract actual text
                                     const actualPhrase = line.substring(phraseIndex, phraseIndex + phrase.length);
-                                    const beforePhrase = line.substring(0, phraseIndex);
-                                    const afterPhrase = line.substring(phraseIndex + actualPhrase.length);
-
                                     insertPoint = {
                                         line: lineIdx,
                                         ch: phraseIndex,
-                                        replaceText: actualPhrase,
-                                        newText: `${beforePhrase}[[${title}]]${afterPhrase}`,
+                                        originalText: actualPhrase,
+                                        linkText: `[[${title}]]`,
+                                        useSeeAlso: false,
                                         reason: llmResult.reason
                                     };
-
-                                    if (this.plugin.settings.debugMode) {
-                                        console.log(`[DEBUG] LLM found insertion point (case-insensitive) at line ${lineIdx}: "${actualPhrase}"`);
-                                    }
                                     break;
                                 }
                             } else {
-                                // Found exact match
-                                const beforePhrase = line.substring(0, phraseIndex);
-                                const afterPhrase = line.substring(phraseIndex + phrase.length);
-
                                 insertPoint = {
                                     line: lineIdx,
                                     ch: phraseIndex,
-                                    replaceText: phrase,
-                                    newText: `${beforePhrase}[[${title}]]${afterPhrase}`,
+                                    originalText: phrase,
+                                    linkText: `[[${title}]]`,
+                                    useSeeAlso: false,
                                     reason: llmResult.reason
                                 };
-
-                                if (this.plugin.settings.debugMode) {
-                                    console.log(`[DEBUG] LLM found insertion point at line ${lineIdx}: "${phrase}"`);
-                                }
                                 break;
                             }
                         }
-
-                        if (!insertPoint && this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] LLM suggested phrase not found in document: "${phrase}"`);
-                        }
-                    } else if (this.plugin.settings.debugMode) {
-                        const reason = !llmResult ? 'No LLM result' :
-                            !llmResult.phrase || llmResult.phrase === null ? 'No phrase suggested' :
-                                `Confidence too low (${llmResult.confidence})`;
-                        console.log(`[DEBUG] LLM insertion skipped: ${reason}`);
                     }
                 }
             } catch (error) {
                 console.error('LLM insertion error:', error);
-                if (this.plugin.settings.debugMode) {
-                    console.log('[DEBUG] Falling back to rule-based insertion');
-                }
             }
         }
 
         // Fallback to rule-based insertion if LLM didn't find a good spot
         if (!insertPoint) {
-            insertPoint = this.findBestInsertionPoint(content, title);
+            const result = this.findBestInsertionPoint(content, title);
+            if (result) {
+                insertPoint = {
+                    line: result.line,
+                    ch: result.ch,
+                    originalText: result.replaceText || "",
+                    linkText: `[[${title}]]`,
+                    useSeeAlso: false
+                };
+            } else {
+                insertPoint = { line: -1, ch: -1, originalText: '', linkText: '', useSeeAlso: true };
+            }
         }
 
-        if (insertPoint) {
+        if (insertPoint && !insertPoint.useSeeAlso) {
             // Replace ALL occurrences of the phrase throughout the document
-            const replacePhrase = insertPoint.replaceText;
+            const replacePhrase = insertPoint.originalText;
             if (replacePhrase) {
                 const lines = content.split('\n');
                 const phraseLower = replacePhrase.toLowerCase();
@@ -1081,17 +1065,16 @@ export class LinkSuggestionView extends ItemView {
                     // Find all occurrences in this line (from right to left)
                     const occurrences: number[] = [];
                     let searchIdx = 0;
-                    while (true) {
-                        const foundIdx = lineLower.indexOf(phraseLower, searchIdx);
-                        if (foundIdx === -1) break;
+                    let foundIdx = lineLower.indexOf(phraseLower, searchIdx);
+                    while (foundIdx !== -1) {
                         occurrences.push(foundIdx);
                         searchIdx = foundIdx + 1;
+                        foundIdx = lineLower.indexOf(phraseLower, searchIdx);
                     }
 
                     // Replace from right to left
                     for (let i = occurrences.length - 1; i >= 0; i--) {
                         const foundIdx = occurrences[i];
-                        const actualPhrase = line.substring(foundIdx, foundIdx + replacePhrase.length);
                         const beforePhrase = line.substring(0, foundIdx);
                         const afterPhrase = line.substring(foundIdx + replacePhrase.length);
                         const newLine = `${beforePhrase}[[${title}]]${afterPhrase}`;
@@ -1129,31 +1112,28 @@ export class LinkSuggestionView extends ItemView {
                 new Notice(noticeMessage);
             } else {
                 // No phrase to replace, just insert at the insertion point
-                const lineContent = editor.getLine(insertPoint.line);
-                editor.replaceRange(insertPoint.newText,
-                    { line: insertPoint.line, ch: 0 },
-                    { line: insertPoint.line, ch: lineContent.length }
+                editor.replaceRange(insertPoint.linkText,
+                    { line: insertPoint.line, ch: insertPoint.ch },
+                    { line: insertPoint.line, ch: insertPoint.ch + insertPoint.originalText.length }
                 );
 
-                const linkStart = insertPoint.newText.indexOf('[[');
-                const linkEnd = linkStart + title.length + 4;
+                const linkStart = insertPoint.ch;
+                const linkEnd = linkStart + insertPoint.linkText.length;
 
                 editor.setSelection(
                     { line: insertPoint.line, ch: linkStart },
                     { line: insertPoint.line, ch: linkEnd }
                 );
 
+                const finalLineIdx = insertPoint.line;
                 setTimeout(() => {
-                    editor.setCursor({ line: insertPoint.line, ch: linkEnd });
+                    editor.setCursor({ line: finalLineIdx, ch: linkEnd });
                 }, 1500);
 
                 new Notice(`Added link to ${title}`);
             }
         } else {
             // No good insertion point found - add to See Also section instead
-            if (this.plugin.settings.debugMode) {
-                console.log('[DEBUG] No good insertion point, adding to See Also');
-            }
             this.addToSeeAlso(editor, title);
         }
     }
@@ -1161,7 +1141,7 @@ export class LinkSuggestionView extends ItemView {
     showIgnoredSuggestionsModal() {
         const ignored = this.plugin.cacheManager!.getIgnoredSuggestions();
 
-        const modal = new (require('obsidian').Modal)(this.app);
+        const modal = new Modal(this.app);
         modal.titleEl.setText(`Ignored Suggestions (${ignored.length})`);
 
         if (ignored.length === 0) {

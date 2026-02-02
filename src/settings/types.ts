@@ -1,3 +1,16 @@
+export interface FormattingCacheData {
+    grammar?: string;
+    flashcards?: string[];
+    tags?: string[];
+    structure?: string;
+}
+
+export interface OrganizationCacheData {
+    placement?: string;
+    reasoning?: string;
+    candidates?: { path: string; confidence: number }[];
+}
+
 export interface SmartVaultSettings {
     ollamaEndpoint: string;
     embeddingModel: string;
@@ -35,8 +48,8 @@ export interface SmartVaultSettings {
     cacheDirectory: string;     // Directory to store cache files (default: .smartvault)
 
     // Caching
-    formattingCache: Record<string, { mtime: number, data: any }>;
-    organizationCache: Record<string, { mtime: number, data: any }>;
+    formattingCache: Record<string, { mtime: number, data: FormattingCacheData }>;
+    organizationCache: Record<string, { mtime: number, data: OrganizationCacheData }>;
 }
 
 export const DEFAULT_SETTINGS: SmartVaultSettings = {

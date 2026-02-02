@@ -1,14 +1,10 @@
-import { TAbstractFile, TFile, TFolder, Notice, Platform } from 'obsidian';
+import { TAbstractFile, TFile, TFolder, Notice } from 'obsidian';
 import * as pdfjsLib from 'pdfjs-dist';
+import type { RenderParameters } from 'pdfjs-dist/types/src/display/api';
 import SmartVaultPlugin from '../SmartVaultPlugin';
 import pdfWorkerSource from '../../pdf.worker.min.workerjs';
 
-// Set worker source for PDF.js
-// We copied 'pdf.worker.min.js' to the plugin folder during build.
-if (Platform.isDesktopApp) {
-    // We can't set it here easily because we need 'app' to get the resource path.
-    // We will set it in the constructor/register method instead.
-}
+
 
 export class HandwrittenNoteWatcher {
     private processingQueue: Set<string> = new Set();
@@ -22,7 +18,7 @@ export class HandwrittenNoteWatcher {
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath;
         if (this.plugin.settings.debugMode) {
-            console.log(`[HandwrittenWatcher] Initialized PDF worker from bundled source`);
+            console.debug(`[HandwrittenWatcher] Initialized PDF worker from bundled source`);
         }
 
         this.plugin.registerEvent(
@@ -55,7 +51,7 @@ export class HandwrittenNoteWatcher {
         });
 
         if (this.plugin.settings.debugMode) {
-            console.log("HandwrittenNoteWatcher registered");
+            console.debug("HandwrittenNoteWatcher registered");
         }
     }
 
@@ -103,7 +99,7 @@ export class HandwrittenNoteWatcher {
         }
 
         if (settings.debugMode) {
-            console.log(`[HandwrittenWatcher] Detected new file: ${file.path}`);
+            console.debug(`[HandwrittenWatcher] Detected new file: ${file.path}`);
         }
 
         // specific debounce for new files
@@ -126,7 +122,7 @@ export class HandwrittenNoteWatcher {
     }
 
     // allow force debug and force execution (skipping inbox check)
-    private async transcribeAndMove(file: TFile, forceDebug = false, forceExecution = false) {
+    private async transcribeAndMove(file: TFile, forceDebug = false, _forceExecution = false) {
         if (this.processingQueue.has(file.path)) return;
         this.processingQueue.add(file.path);
 
@@ -184,11 +180,11 @@ export class HandwrittenNoteWatcher {
                 if (forceDebug || settings.debugMode) {
                     // Debug saving logic (omitted for brevity in this focused update, but preserved if useful)
                     // Re-adding essential debug log
-                    console.log(`[HandwrittenDebug] Processing Page ${i + 1}`);
+                    console.debug(`[HandwrittenDebug] Processing Page ${i + 1}`);
                 }
 
                 new Notice(`🧠 Reading Page ${i + 1}/${imagesBase64.length}...`);
-                const startTime = Date.now();
+                const _startTime = Date.now();
 
                 // Slow Model Warning
                 const checkTimer = setTimeout(() => {
@@ -209,7 +205,7 @@ export class HandwrittenNoteWatcher {
 
                 // Clean up conversational filler
                 const conversationalRegex = /^(Here is|Sure|Okay|I can|Transcribing|The image|This text|The transcription).*/i;
-                let lines = pageTranscript.split('\n');
+                const lines = pageTranscript.split('\n');
                 while (lines.length > 0 && (conversationalRegex.test(lines[0]) || lines[0].trim() === '')) {
                     lines.shift();
                 }
@@ -248,8 +244,8 @@ export class HandwrittenNoteWatcher {
                     existingPages.add(match[1]);
                 }
 
-                if (forceDebug) {
-                    console.log(`[HandwrittenDebug] Existing pages: ${Array.from(existingPages).join(', ')}`);
+                if (forceDebug || settings.debugMode) {
+                    console.debug(`[HandwrittenDebug] Existing pages: ${Array.from(existingPages).join(', ')}`);
                 }
 
                 // Check which new pages are actually new
@@ -263,7 +259,7 @@ export class HandwrittenNoteWatcher {
                         if (!existingPages.has(pageNum)) {
                             newContentToAppend += "\n\n" + block.trim();
                         } else {
-                            if (forceDebug) console.log(`[HandwrittenDebug] Skipping Page ${pageNum} - already exists.`);
+                            if (forceDebug || settings.debugMode) console.debug(`[HandwrittenDebug] Skipping Page ${pageNum} - already exists.`);
                         }
                     } else if (block.trim().length > 0 && !block.includes('No text transcribed')) {
                         // Content without page header (maybe intro?), ignore if we have pages structure
@@ -316,9 +312,10 @@ ${fullTranscript}
                 new Notice(`✅ Transcript created: ${newFile.basename}`);
             }
 
-        } catch (e: any) {
-            console.error("Transcription failed:", e);
-            new Notice(`❌ Failed to process ${file.name}: ${e.message || e}`);
+        } catch (e) {
+            const error = e as Error;
+            console.error("Transcription failed:", error);
+            new Notice(`❌ Failed to process ${file.name}: ${error.message || error}`);
         } finally {
             this.processingQueue.delete(file.path);
         }
@@ -348,9 +345,10 @@ ${fullTranscript}
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            const renderContext: any = {
+            const renderContext: RenderParameters = {
                 canvasContext: context,
-                viewport: viewport
+                viewport: viewport,
+                canvas: canvas
             };
 
             await page.render(renderContext).promise;
@@ -402,12 +400,13 @@ ${fullTranscript}
                 if (!exists) {
                     await this.plugin.app.vault.createFolder(currentPath);
                 }
-            } catch (error: any) {
+            } catch (error) {
+                const e = error as Error;
                 // Ignore "Folder already exists" errors, fail on others
-                if (error.message && error.message.includes("already exists")) {
+                if (e.message && e.message.includes("already exists")) {
                     // benign
                 } else {
-                    console.error(`Failed to create folder ${currentPath}:`, error);
+                    console.error(`Failed to create folder ${currentPath}:`, e);
                     // Don't throw, try to continue
                 }
             }

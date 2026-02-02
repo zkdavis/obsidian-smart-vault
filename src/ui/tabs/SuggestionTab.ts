@@ -1,6 +1,5 @@
-
-import { App, TFile, WorkspaceLeaf } from 'obsidian';
-import SmartVaultPlugin from '../../main';
+import { App, TFile } from 'obsidian';
+import SmartVaultPlugin from '../../plugin/SmartVaultPlugin';
 import { BaseTab } from './BaseTab';
 import { LinkSuggestionView } from '../LinkSuggestionView';
 
@@ -27,9 +26,6 @@ export class SuggestionTab extends BaseTab {
 
     render(): void {
         // Delegate rendering back to the parent view's logic, but targeted at this container
-        // Note: We need to adapt the parent view's render method to accept a container, 
-        // or we just move the logic here.
-        // For now, let's call a new method on parentView: renderSuggestions(container)
         this.parentView.renderSuggestionsToContainer(this.containerEl);
     }
 }
