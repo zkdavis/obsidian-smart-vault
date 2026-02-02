@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import type { SmartVaultPlugin } from '../main';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export class SmartVaultSettingTab extends PluginSettingTab {
     plugin: SmartVaultPlugin;
@@ -13,7 +14,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl('h2', { text: 'Smart Vault Organizer Settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Smart Vault Organizer Settings');
 
         // Contribution Buttons
         const contributionContainer = containerEl.createDiv({ cls: 'smart-vault-contribution-container' });
@@ -22,22 +25,12 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         contributionContainer.style.marginBottom = '20px';
         contributionContainer.style.justifyContent = 'center';
 
-        const createButton = (text: string, url: string, icon?: string) => {
-            const btn = contributionContainer.createEl('a', {
+        const createButton = (text: string, url: string, _icon?: string) => {
+            contributionContainer.createEl('a', {
                 href: url,
                 text: text,
                 cls: 'smart-vault-contribution-btn'
             });
-            btn.style.padding = '8px 16px';
-            btn.style.borderRadius = '4px';
-            btn.style.backgroundColor = 'var(--interactive-accent)';
-            btn.style.color = 'var(--text-on-accent)';
-            btn.style.textDecoration = 'none';
-            btn.style.fontWeight = 'bold';
-
-            if (icon) {
-                // simple icon support if needed, or just text
-            }
         };
 
         createButton('⭐ Star on GitHub', 'https://github.com/zkdavis/obsidian-smart-vault');
@@ -46,17 +39,21 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         createButton('🍵 Ko-Fi', 'https://ko-fi.com/zkdavis');
 
         // Debug Section
-        containerEl.createEl('h3', { text: 'Debug' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Debug');
 
         new Setting(containerEl)
             .setName('Enable Debug Mode')
             .setDesc('Show detailed debug logs in console (Ctrl+Shift+I)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.debugMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.debugMode = value;
-                    await this.plugin.saveSettings();
-                    console.log(`[DEBUG] Debug mode ${value ? 'enabled' : 'disabled'}`);
+                .onChange((value) => {
+                    void (async () => {
+                        this.plugin.settings.debugMode = value;
+                        await this.plugin.saveSettings();
+                        console.log(`[DEBUG] Debug mode ${value ? 'enabled' : 'disabled'}`);
+                    })();
                 }));
 
         new Setting(containerEl)
@@ -70,7 +67,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Embedding Settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Embedding settings');
 
         new Setting(containerEl)
             .setName('Ollama Endpoint')
@@ -173,7 +172,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     }
                 }));
 
-        containerEl.createEl('h3', { text: 'Chat RAG Settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Chat RAG settings');
 
         new Setting(containerEl)
             .setName('Vault Mode Threshold')
@@ -200,7 +201,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         // LLM Reranking Section
-        containerEl.createEl('h3', { text: 'LLM-Enhanced Suggestions' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('LLM-enhanced suggestions');
         containerEl.createEl('p', {
             text: 'Use a larger language model like qwen2.5:7b to intelligently rerank and explain link suggestions.',
             cls: 'setting-item-description'
@@ -237,7 +240,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h4', { text: 'Task-Specific Models' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Task-specific models');
 
         new Setting(containerEl)
             .setName('Chat Model')
@@ -375,7 +380,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         // Handwritten Notes Section
-        containerEl.createEl('h3', { text: 'Handwritten Notes (Vision)' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Handwritten notes (vision)');
         containerEl.createEl('p', {
             text: 'Automatically process handwritten notes dropped into a specific folder.',
             cls: 'setting-item-description'
@@ -426,7 +433,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Vault Management' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Vault management');
 
         new Setting(containerEl)
             .setName('Cache Directory')
@@ -443,34 +452,37 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Manual Scan')
             .setDesc('Scan vault now to generate embeddings for all notes')
             .addButton(button => button
-                .setButtonText('Scan Vault Now')
+                .setButtonText('Scan vault now')
                 .setCta()
-                .onClick(async () => {
-                    button.setButtonText('Scanning...');
-                    button.setDisabled(true);
-                    try {
-                        await this.plugin.scanVault();
-                    } finally {
-                        button.setButtonText('Scan Vault Now');
-                        button.setDisabled(false);
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        button.setButtonText('Scanning...');
+                        button.setDisabled(true);
+                        try {
+                            await this.plugin.scanVault();
+                        } finally {
+                            button.setButtonText('Scan vault now');
+                            button.setDisabled(false);
+                        }
+                    })();
                 }));
+
 
         new Setting(containerEl)
             .setName('Export Vector Cache')
             .setDesc('Export embeddings to JSON for backup or debugging (saves to "smart-vault-export.json" in root)')
             .addButton(button => button
-                .setButtonText('Export Cache')
+                .setButtonText('Export cache')
                 .onClick(async () => {
                     button.setButtonText('Exporting...');
                     button.setDisabled(true);
                     try {
                         const path = await this.plugin.cacheManager!.exportCache();
                         new Notice(`Successfully exported cache to ${path}`);
-                    } catch (error: any) {
-                        new Notice(`Export failed: ${error.message}`);
+                    } catch (error) {
+                        new Notice(`Export failed: ${error instanceof Error ? error.message : String(error)}`);
                     } finally {
-                        button.setButtonText('Export Cache');
+                        button.setButtonText('Export cache');
                         button.setDisabled(false);
                     }
                 }));
@@ -479,29 +491,37 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Import Vector Cache')
             .setDesc('Restore embeddings from "smart-vault-export.json". WARNING: Overwrites current in-memory cache!')
             .addButton(button => button
-                .setButtonText('Import Cache')
+                .setButtonText('Import cache')
                 .setWarning()
                 .onClick(async () => {
-                    if (!confirm('Are you sure you want to overwrite current embeddings with the backup?')) return;
+                    new ConfirmModal(
+                        this.app,
+                        'Import Cache',
+                        'Are you sure you want to overwrite current embeddings with the backup?',
+                        async (confirmed: boolean) => {
+                            if (!confirmed) return;
 
-                    button.setButtonText('Importing...');
-                    button.setDisabled(true);
-                    try {
-                        const count = await this.plugin.cacheManager!.importCache();
-                        new Notice(`Successfully imported ${count} embeddings!`);
-                    } catch (error: any) {
-                        new Notice(`Import failed: ${error.message}`);
-                    } finally {
-                        button.setButtonText('Import Cache');
-                        button.setDisabled(false);
-                    }
+                            button.setButtonText('Importing...');
+                            button.setDisabled(true);
+                            try {
+                                const count = await this.plugin.cacheManager!.importCache();
+                                new Notice(`Successfully imported ${count} embeddings!`);
+                            } catch (error) {
+                                new Notice(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+                            } finally {
+                                button.setButtonText('Import cache');
+                                button.setDisabled(false);
+                            }
+                        },
+                        'Import'
+                    ).open();
                 }));
 
         new Setting(containerEl)
             .setName('Clear Embeddings')
             .setDesc('Delete all cached embeddings and start fresh (requires re-scan)')
             .addButton(button => button
-                .setButtonText('Clear Embeddings')
+                .setButtonText('Clear embeddings')
                 .setWarning()
                 .onClick(async () => {
                     button.setButtonText('Clearing...');
@@ -510,7 +530,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                         await this.plugin.clearEmbeddings();
                         new Notice('Embeddings cleared. Scan vault to rebuild.');
                     } finally {
-                        button.setButtonText('Clear Embeddings');
+                        button.setButtonText('Clear embeddings');
                         button.setDisabled(false);
                     }
                 }));
@@ -519,7 +539,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Clear Analysis Cache')
             .setDesc('Clear cached results for Formatting and Organization analysis')
             .addButton(button => button
-                .setButtonText('Clear Cache')
+                .setButtonText('Clear cache')
                 .setWarning()
                 .onClick(async () => {
                     this.plugin.settings.formattingCache = {};
@@ -532,7 +552,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Complete Rescan')
             .setDesc('Clear all caches (embeddings, suggestions, file modification times) and rescan the entire vault from scratch')
             .addButton(button => button
-                .setButtonText('Complete Rescan')
+                .setButtonText('Complete rescan')
                 .setWarning()
                 .onClick(async () => {
                     button.setButtonText('Rescanning...');
@@ -545,11 +565,11 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                         await this.plugin.scanVault();
 
                         new Notice('Complete rescan finished!');
-                    } catch (error: any) {
-                        new Notice('Rescan failed: ' + error.message);
+                    } catch (error) {
+                        new Notice(`Rescan failed: ${error instanceof Error ? error.message : String(error)}`);
                         console.error('Rescan error:', error);
                     } finally {
-                        button.setButtonText('Complete Rescan');
+                        button.setButtonText('Complete rescan');
                         button.setDisabled(false);
                     }
                 }));

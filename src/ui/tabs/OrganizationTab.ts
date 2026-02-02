@@ -1,11 +1,26 @@
-
-import { App, MarkdownView, Notice, TFile, TFolder } from 'obsidian';
-import SmartVaultPlugin from '../../main';
+import { App, Notice, TFile, TFolder } from 'obsidian';
+import SmartVaultPlugin from '../../plugin/SmartVaultPlugin';
 import { BaseTab } from './BaseTab';
+import type { OrganizationCacheData } from '../../settings/types';
+
+/**
+ * Interface for a suggested folder placement
+ */
+interface OrganizationSuggestion {
+    folder: string;
+    confidence: number;
+    reason?: string;
+    is_new_path?: boolean;
+}
+
+interface OrganizationAnalysisResult {
+    suggestions: OrganizationSuggestion[];
+    explanation?: string;
+}
 
 export class OrganizationTab extends BaseTab {
     private currentFile: TFile | null = null;
-    private lastResult: any | null = null;
+    private lastResult: OrganizationAnalysisResult | null = null;
     private lastResultPath: string | null = null;
     private isLoading: boolean = false;
 
@@ -15,10 +30,12 @@ export class OrganizationTab extends BaseTab {
 
     async onOpen(): Promise<void> {
         this.render();
+        await Promise.resolve();
     }
 
     async onClose(): Promise<void> {
         this.containerEl.empty();
+        await Promise.resolve();
     }
 
     setFileContext(file: TFile): void {
@@ -29,10 +46,10 @@ export class OrganizationTab extends BaseTab {
         this.containerEl.empty();
         const content = this.containerEl.createDiv({ cls: 'smart-vault-organization-tab' });
 
-        content.createEl('h3', { text: 'Smart Organization' });
+        content.createEl('h3', { text: 'Smart organization' });
 
         const controls = content.createDiv({ cls: 'smart-vault-controls' });
-        const analyzeBtn = controls.createEl('button', { text: 'Suggest Placement', cls: 'mod-cta' });
+        const analyzeBtn = controls.createEl('button', { text: 'Suggest placement', cls: 'mod-cta' });
 
         const outputArea = content.createDiv({ cls: 'smart-vault-output' });
 
@@ -48,7 +65,7 @@ export class OrganizationTab extends BaseTab {
         }
     }
 
-    async analyzePlacement(container: HTMLElement) {
+    async analyzePlacement(_container: HTMLElement) {
         if (!this.currentFile) {
             new Notice('No active file context');
             return;
@@ -61,9 +78,9 @@ export class OrganizationTab extends BaseTab {
         const cached = this.plugin.settings.organizationCache?.[cacheKey];
         if (cached && cached.mtime === mtime && cached.data) {
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Cache hit for ${cacheKey}`);
+                console.debug(`[DEBUG] Cache hit for ${cacheKey}`);
             }
-            this.lastResult = cached.data;
+            this.lastResult = cached.data as OrganizationAnalysisResult; // Cast cached data
             this.lastResultPath = cacheKey;
             this.render();
             return;
@@ -82,7 +99,7 @@ export class OrganizationTab extends BaseTab {
             const { wasmModule } = this.plugin;
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] analyze_organization called for ${this.currentFile.basename}`);
+                console.debug(`[DEBUG] analyze_organization called for ${this.currentFile.basename}`);
             }
 
             const model = this.plugin.settings.organizationModel || this.plugin.settings.llmModel;
@@ -99,7 +116,7 @@ export class OrganizationTab extends BaseTab {
             );
 
             const timeoutMs = this.plugin.settings.llmTimeout || 30000;
-            const timeoutPromise = new Promise<any>((_, reject) => {
+            const timeoutPromise = new Promise<unknown>((_, reject) => {
                 setTimeout(() => reject(new Error('Organization analysis timed out')), timeoutMs);
             });
 
@@ -107,13 +124,13 @@ export class OrganizationTab extends BaseTab {
 
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] analyze_organization completed`);
-                console.log(`[DEBUG] Result Type:`, typeof result);
+                console.debug(`[DEBUG] analyze_organization completed`);
+                console.debug(`[DEBUG] Result Type:`, typeof result);
             }
 
             // Handle potential string return from WASM
             if (typeof result === 'string') {
-                if (this.plugin.settings.debugMode) console.log(`[DEBUG] parsing string result:`, result);
+                if (this.plugin.settings.debugMode) console.debug(`[DEBUG] parsing string result:`, result);
                 try {
                     // Clean Markdown code blocks if present
                     const clean = result.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -123,17 +140,17 @@ export class OrganizationTab extends BaseTab {
                     new Notice("Failed to parse AI response. Check console for details.");
                 }
             } else {
-                if (this.plugin.settings.debugMode) console.log(`[DEBUG] Received object result:`, result);
+                if (this.plugin.settings.debugMode) console.debug(`[DEBUG] Received object result:`, result);
             }
 
             // Normalize Maps to Objects (caused by serde_wasm_bindgen with ES6 Maps)
             result = this.normalizeData(result);
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Normalized result:`, result);
+                console.debug(`[DEBUG] Normalized result:`, result);
             }
 
-            this.lastResult = result;
+            this.lastResult = result as OrganizationAnalysisResult; // Cast to the new type
             this.lastResultPath = this.currentFile.path;
 
             // CACHE WRITE
@@ -141,12 +158,12 @@ export class OrganizationTab extends BaseTab {
 
             const cacheEntry = {
                 mtime: this.currentFile.stat.mtime,
-                data: result
+                data: result as OrganizationCacheData // Ensure this matches the cache data type
             };
             this.plugin.settings.organizationCache[this.currentFile.path] = cacheEntry;
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Wrote to Organization Cache for ${this.currentFile.path}`, cacheEntry);
+                console.debug(`[DEBUG] Wrote to Organization Cache for ${this.currentFile.path}`, cacheEntry);
             }
 
             await this.plugin.saveSettings();
@@ -160,11 +177,15 @@ export class OrganizationTab extends BaseTab {
         }
     }
 
-    private normalizeData(data: any): any {
+    // This function needs to handle 'any' input because the WASM module might return various types
+    // before normalization, and the cache might store 'any' if not strictly typed.
+    // The return type should be 'any' or a more general type if it can return different structures.
+    // For now, keeping it as 'any' to allow for flexible normalization.
+    private normalizeData(data: unknown): unknown {
         if (data instanceof Map) {
-            const obj: any = {};
+            const obj: Record<string, unknown> = {};
             for (const [key, value] of data.entries()) {
-                obj[key] = this.normalizeData(value);
+                obj[String(key)] = this.normalizeData(value);
             }
             return obj;
         }
@@ -172,75 +193,98 @@ export class OrganizationTab extends BaseTab {
             return data.map(item => this.normalizeData(item));
         }
         if (typeof data === 'object' && data !== null) {
-            const obj: any = {};
+            const obj: Record<string, unknown> = {};
             for (const key in data) {
-                obj[key] = this.normalizeData(data[key]);
+                if (Object.prototype.hasOwnProperty.call(data, key)) {
+                    obj[key] = this.normalizeData((data as Record<string, unknown>)[key]);
+                }
             }
             return obj;
         }
         return data;
     }
 
-    renderResult(container: HTMLElement, result: any, file: TFile) {
+    renderResult(container: HTMLElement, result: OrganizationAnalysisResult, file: TFile) {
         container.empty();
 
         // Robust suggestion extraction
-        let suggestions: any[] = [];
-        if (Array.isArray(result)) {
-            suggestions = result;
-        } else if (result && Array.isArray(result.suggestions)) {
+        let suggestions: OrganizationSuggestion[] = [];
+        if (result && Array.isArray(result.suggestions)) {
             suggestions = result.suggestions;
-        } else if (result && typeof result === 'object') {
-            suggestions = [result];
         }
 
-        // Filter valid candidates
-        suggestions = suggestions.filter(s => s && typeof s.folder === 'string' && typeof s.confidence === 'number');
-
-        // Sort by confidence
-        suggestions.sort((a: any, b: any) => b.confidence - a.confidence);
-
-        const section = container.createDiv({ cls: 'smart-vault-section' });
-        section.createEl('h4', { text: `Suggested Locations (${suggestions.length})` });
-
-        const list = section.createDiv({ cls: 'smart-vault-scroll-view' });
-
         if (suggestions.length === 0) {
-            list.createDiv({ text: "No valid suggestions found.", attr: { style: "font-style: italic; color: var(--text-muted);" } });
+            container.createEl('p', { text: 'No organization suggestions found for this note.' });
+            if (result.explanation) {
+                container.createEl('p', { text: result.explanation, cls: 'smart-vault-explanation' });
+            }
             return;
         }
 
-        suggestions.forEach((candidate: any) => {
-            const item = list.createDiv({ cls: 'smart-vault-structure-item', attr: { style: 'flex-direction: column; align-items: stretch; gap: 8px;' } });
+        // Sort by confidence
+        suggestions.sort((a, b) => b.confidence - a.confidence);
 
-            const header = item.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center;' } });
-            header.createDiv({ text: `📂 ${candidate.folder}`, attr: { style: 'font-weight: 600; color: var(--interactive-accent);' } });
-            header.createDiv({ text: `${Math.round(candidate.confidence * 100)}%`, attr: { style: 'font-size: 0.85em; color: var(--text-muted);' } });
+        const list = container.createDiv({ cls: 'smart-vault-suggestion-list' });
 
-            if (candidate.reason) {
-                item.createDiv({ text: candidate.reason, cls: 'smart-vault-reason' });
+        if (result.explanation) {
+            container.createEl('p', { text: result.explanation, cls: 'smart-vault-explanation' });
+        }
+
+        suggestions.forEach(suggestion => {
+            const item = list.createDiv({ cls: 'smart-vault-suggestion-item' });
+
+            const card = item.createDiv({ cls: 'suggestion-card' });
+
+            const header = card.createDiv({ cls: 'suggestion-header' });
+            header.createEl('span', { text: '📁 Suggested Folder:', cls: 'suggestion-label' });
+            header.createEl('code', { text: suggestion.folder, cls: 'suggestion-value' });
+
+            const confidence = card.createDiv({ cls: 'suggestion-confidence' });
+            const percent = Math.round(suggestion.confidence * 100);
+            confidence.createEl('span', { text: `Confidence: ${percent}%` });
+
+            const meter = confidence.createDiv({
+                cls: 'confidence-meter'
+            });
+            meter.createDiv({
+                cls: 'confidence-fill',
+                attr: { style: `width: ${percent}%` }
+            });
+
+            if (suggestion.reason) {
+                card.createDiv({ text: suggestion.reason, cls: 'suggestion-reason' });
             }
 
-            const moveBtn = item.createEl('button', { text: 'Move Here', cls: 'mod-cta', attr: { style: 'align-self: flex-start; margin-top: 4px; font-size: 0.9em; padding: 4px 12px;' } });
+            if (suggestion.is_new_path) {
+                card.createDiv({ text: '✨ New folder path', cls: 'suggestion-badge' });
+            }
+
+            const actions = item.createDiv({ cls: 'suggestion-actions' });
+            const moveBtn = actions.createEl('button', { text: 'Move File', cls: 'mod-cta' });
 
             moveBtn.onclick = async () => {
-                try {
-                    const folderPath = candidate.folder;
-                    // Create folder if new (recursive)
-                    if (candidate.is_new_path) {
-                        await this.ensureFolderExists(folderPath);
-                    }
-
-                    const newPath = `${folderPath}/${file.name}`;
-                    await this.app.fileManager.renameFile(file, newPath);
-                    new Notice(`Moved to ${newPath}`);
-                    container.empty();
-                    container.createDiv({ text: '✅ File moved successfully!' });
-                } catch (err) {
-                    new Notice(`Failed to move: ${err}`);
-                }
+                await this.moveFile(file, suggestion.folder);
             };
         });
+    }
+
+    private async moveFile(file: TFile, targetPath: string): Promise<void> {
+        try {
+            // Ensure the target folder exists
+            await this.ensureFolderExists(targetPath);
+
+            const newPath = `${targetPath}/${file.name}`;
+            await this.app.fileManager.renameFile(file, newPath);
+            new Notice(`Moved ${file.name} to ${targetPath}`);
+
+            // Clear result since file moved
+            this.lastResult = null;
+            this.lastResultPath = null;
+            this.render();
+        } catch (error) {
+            console.error('Move failed:', error);
+            new Notice(`Move failed: ${error.message}`);
+        }
     }
 
     private async ensureFolderExists(path: string) {
@@ -260,13 +304,14 @@ export class OrganizationTab extends BaseTab {
                 if (!exists) {
                     await this.app.vault.createFolder(currentPath);
                 }
-            } catch (error: any) {
+            } catch (error) {
+                const e = error as Error;
                 // Ignore "Folder already exists" errors, fail on others
-                if (error.message && error.message.includes("already exists")) {
+                if (e.message && e.message.includes("already exists")) {
                     // benign
                 } else {
-                    console.error(`Failed to create folder ${currentPath}:`, error);
-                    throw error;
+                    console.error(`Failed to create folder ${currentPath}:`, e);
+                    throw e;
                 }
             }
         }

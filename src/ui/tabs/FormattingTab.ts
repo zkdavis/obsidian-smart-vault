@@ -1,11 +1,46 @@
-
 import { App, MarkdownView, Notice, TFile, setIcon } from 'obsidian';
-import SmartVaultPlugin from '../../main';
+import SmartVaultPlugin from '../../plugin/SmartVaultPlugin';
 import { BaseTab } from './BaseTab';
+import type { FormattingCacheData } from '../../settings/types';
+
+/**
+ * Interface for a grammar correction
+ */
+interface GrammarIssue {
+    original: string;
+    corrected: string;
+    reason: string;
+}
+
+/**
+ * Interface for a structure suggestion
+ */
+interface StructureSuggestion {
+    title: string;
+    description: string;
+    markdown_to_insert: string;
+}
+
+/**
+ * Interface for a flashcard
+ */
+interface Flashcard {
+    question: string;
+    answer: string;
+}
+
+interface FormattingAnalysisResult {
+    grammar_issues: GrammarIssue[];
+    structure_suggestions: StructureSuggestion[];
+    flashcards: (string | Flashcard)[];
+    tags: string[];
+    existing_tags?: string[]; // Add existing_tags and new_tags as they are used in renderResults
+    new_tags?: string[];
+}
 
 export class FormattingTab extends BaseTab {
     private currentFile: TFile | null = null;
-    private lastAnalysis: any | null = null;
+    private lastAnalysis: FormattingAnalysisResult | null = null;
     private lastAnalysisPath: string | null = null;
     private isLoading: boolean = false;
     private previewMarker: { lineStart: number, content: string } | null = null;
@@ -20,22 +55,24 @@ export class FormattingTab extends BaseTab {
 
     async onOpen(): Promise<void> {
         this.render();
+        await Promise.resolve();
     }
 
     async onClose(): Promise<void> {
         this.containerEl.empty();
+        await Promise.resolve();
     }
 
     render(): void {
         this.containerEl.empty();
         const content = this.containerEl.createDiv({ cls: 'smart-vault-formatting-tab' });
 
-        content.createEl('h3', { text: 'Smart Formatting & Quality' });
+        content.createEl('h3', { text: 'Smart formatting & quality' });
 
         const controls = content.createDiv({ cls: 'smart-vault-controls' });
 
         const analyzeBtn = controls.createEl('button', {
-            text: 'Analyze Current Note',
+            text: 'Analyze current note',
             cls: 'mod-cta'
         });
 
@@ -61,7 +98,7 @@ export class FormattingTab extends BaseTab {
     }
 
 
-    async analyzeCurrentNote(container: HTMLElement) {
+    async analyzeCurrentNote(_container: HTMLElement) {
         if (!this.currentFile) {
             new Notice('No active file context');
             return;
@@ -74,9 +111,9 @@ export class FormattingTab extends BaseTab {
         const cached = this.plugin.settings.formattingCache?.[cacheKey];
         if (cached && cached.mtime === mtime && cached.data) {
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] Cache hit for ${cacheKey}`);
+                console.debug(`[DEBUG] Cache hit for ${cacheKey}`);
             }
-            this.lastAnalysis = cached.data;
+            this.lastAnalysis = cached.data as FormattingAnalysisResult;
             this.lastAnalysisPath = cacheKey;
             this.render();
             return;
@@ -96,7 +133,7 @@ export class FormattingTab extends BaseTab {
             const { wasmModule } = this.plugin;
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] analyze_formatting called for ${this.currentFile.path}`);
+                console.debug(`[DEBUG] analyze_formatting called for ${this.currentFile.path}`);
             }
 
             const model = this.plugin.settings.formattingModel || this.plugin.settings.llmModel;
@@ -121,17 +158,17 @@ export class FormattingTab extends BaseTab {
 
 
             if (this.plugin.settings.debugMode) {
-                console.log(`[DEBUG] analyze_formatting completed for ${this.currentFile.path}`);
+                console.debug(`[DEBUG] analyze_formatting completed for ${this.currentFile.path}`);
             }
 
-            this.lastAnalysis = result;
+            this.lastAnalysis = result as FormattingAnalysisResult;
             this.lastAnalysisPath = this.currentFile.path;
 
             // CACHE WRITE
             if (!this.plugin.settings.formattingCache) this.plugin.settings.formattingCache = {};
             this.plugin.settings.formattingCache[this.currentFile.path] = {
                 mtime: this.currentFile.stat.mtime,
-                data: result
+                data: result as unknown as FormattingCacheData
             };
             await this.plugin.saveSettings();
 
@@ -145,26 +182,23 @@ export class FormattingTab extends BaseTab {
         }
     }
 
-    renderResults(container: HTMLElement, result: any, file: TFile) {
+    renderResults(container: HTMLElement, result: FormattingAnalysisResult, file: TFile) {
         container.empty();
 
         // 1. Tags
-        if (result.existing_tags?.length > 0 || result.new_tags?.length > 0) {
+        if ((result.existing_tags && result.existing_tags.length > 0) || (result.new_tags && result.new_tags.length > 0)) {
             const tagSection = container.createDiv({ cls: 'smart-vault-section' });
             tagSection.createEl('h4', { text: '🏷️ Tags' });
 
             // Scrollable Tags
             const tagContainer = tagSection.createDiv({
-                cls: 'smart-vault-scroll-view',
-                attr: {
-                    style: 'display: flex; flex-direction: column; gap: 12px;'
-                }
+                cls: 'smart-vault-scroll-view smart-vault-flex-column smart-vault-gap-12'
             });
 
             if (result.existing_tags?.length) {
                 const existingDiv = tagContainer.createDiv();
-                existingDiv.createEl('h6', { text: 'Existing Tags', attr: { style: 'margin: 0 0 8px 0; color: var(--text-muted);' } });
-                const btnContainer = existingDiv.createDiv({ attr: { style: 'display: flex; flex-wrap: wrap; gap: 6px;' } });
+                existingDiv.createEl('h6', { text: 'Existing Tags', cls: 'smart-vault-margin-0 smart-vault-muted' });
+                const btnContainer = existingDiv.createDiv({ cls: 'smart-vault-flex-row smart-vault-flex-wrap smart-vault-gap-6' });
 
                 result.existing_tags.forEach((tag: string) => {
                     // Existing tags button (maybe click to remove? For now just visual consistency)
@@ -174,8 +208,8 @@ export class FormattingTab extends BaseTab {
 
             if (result.new_tags?.length) {
                 const newDiv = tagContainer.createDiv();
-                newDiv.createEl('h6', { text: 'Suggested Tags', attr: { style: 'margin: 0 0 8px 0; color: var(--interactive-accent);' } });
-                const btnContainer = newDiv.createDiv({ attr: { style: 'display: flex; flex-wrap: wrap; gap: 6px;' } });
+                newDiv.createEl('h6', { text: 'Suggested Tags', cls: 'smart-vault-margin-0 smart-vault-accent' });
+                const btnContainer = newDiv.createDiv({ cls: 'smart-vault-flex-row smart-vault-flex-wrap smart-vault-gap-6' });
 
                 result.new_tags.forEach((tag: string) => {
                     const tagBtn = btnContainer.createEl('button', { text: `+ #${tag}`, cls: 'tag-pill new smart-vault-tag-btn' });
@@ -187,39 +221,41 @@ export class FormattingTab extends BaseTab {
             }
         }
 
-        // 2. Grammar
-        if (result.grammar?.length > 0) {
-            const grammarSection = container.createDiv({ cls: 'smart-vault-section' });
-            grammarSection.createEl('h4', { text: '📝 Grammar & Typos' });
+        // 2. Grammar Issues
+        if (result.grammar_issues && result.grammar_issues.length > 0) {
+            const section = container.createDiv({ cls: 'smart-vault-section' });
+            section.createEl('h4', { text: '💎 Grammar & Style' });
 
-            const list = grammarSection.createEl('ul', { cls: 'smart-vault-scroll-view' });
-            for (const issue of result.grammar) {
-                const li = list.createEl('li', { cls: 'smart-vault-grammar-item' });
+            const list = section.createDiv({ cls: 'smart-vault-grammar-list' });
 
-                const originalSpan = li.createSpan({ text: `"${issue.original}"`, cls: 'smart-vault-original' });
-                li.createSpan({ text: " → " });
-                li.createSpan({ text: `"${issue.corrected}"`, cls: 'smart-vault-correction' });
-                li.createDiv({ text: issue.reason, cls: 'smart-vault-reason' });
+            result.grammar_issues.forEach((issue) => {
+                const item = list.createDiv({ cls: 'smart-vault-grammar-item' });
 
-                const applyBtn = li.createEl('button', { text: 'Apply', cls: 'smart-vault-apply-btn' });
+                const diff = item.createDiv({ cls: 'grammar-diff' });
+                diff.createSpan({ text: issue.original, cls: 'grammar-original' });
+                diff.createSpan({ text: ' → ', cls: 'grammar-arrow' });
+                diff.createSpan({ text: issue.corrected, cls: 'grammar-corrected' });
 
-                // Hover Effects
-                li.onmouseenter = () => {
-                    if (this.plugin.settings.enableHoverPreviews) {
-                        this.highlightTextInEditor(issue.original);
-                    }
-                };
+                if (issue.reason) {
+                    item.createDiv({ text: issue.reason, cls: 'grammar-reason' });
+                }
 
-                // Interaction
+                const applyBtn = item.createEl('button', { text: 'Apply' });
                 applyBtn.onclick = async () => {
                     await this.applyGrammarFix(file, issue.original, issue.corrected);
-                    // Remove from UI (visually)
-                    li.remove();
+                    item.addClass('is-applied');
+                    applyBtn.disabled = true;
+                    applyBtn.setText('Applied');
+
                     // Update cache
-                    const idx = this.lastAnalysis?.grammar.indexOf(issue);
-                    if (idx > -1) this.lastAnalysis?.grammar.splice(idx, 1);
+                    if (this.lastAnalysis) {
+                        const idx = this.lastAnalysis.grammar_issues.indexOf(issue);
+                        if (idx > -1) {
+                            this.lastAnalysis.grammar_issues.splice(idx, 1);
+                        }
+                    }
                 };
-            }
+            });
         }
 
         // 3. Structure
@@ -227,7 +263,7 @@ export class FormattingTab extends BaseTab {
             const structureSection = container.createDiv({ cls: 'smart-vault-section' });
             structureSection.createEl('h4', { text: '🏗️ Structure' });
             const ul = structureSection.createEl('ul', { cls: 'smart-vault-scroll-view' });
-            result.structure_suggestions.forEach((s: any) => {
+            result.structure_suggestions.forEach((s) => {
                 const li = ul.createEl('li', { cls: 'smart-vault-structure-item' });
 
                 // Handle both string (legacy/fallback) and object formats
@@ -236,8 +272,8 @@ export class FormattingTab extends BaseTab {
                 const content = typeof s === 'string' ? s : s.markdown_to_insert;
 
                 const textDiv = li.createDiv();
-                textDiv.createDiv({ text: title, attr: { style: 'font-weight: 600;' } });
-                if (desc) textDiv.createDiv({ text: desc, attr: { style: 'font-size: 0.85em; color: var(--text-muted);' } });
+                textDiv.createDiv({ text: title, cls: 'smart-vault-bold' });
+                if (desc) textDiv.createDiv({ text: desc, cls: 'smart-vault-small smart-vault-muted' });
 
                 const addBtn = li.createEl('button', { cls: 'smart-vault-mini-btn', title: 'Append content to note' });
                 setIcon(addBtn, 'plus-circle');
@@ -257,7 +293,6 @@ export class FormattingTab extends BaseTab {
 
                         editor.replaceRange(previewContent, { line: lineCount, ch: 0 });
 
-                        // Scroll to view
                         const newLastLine = editor.lineCount();
                         editor.scrollIntoView({
                             from: { line: lineCount, ch: 0 },
@@ -321,15 +356,15 @@ export class FormattingTab extends BaseTab {
 
             const cardList = flashcardSection.createEl('div', { cls: 'smart-vault-flashcards' });
 
-            result.flashcards.forEach((card: any) => {
+            result.flashcards.forEach((card) => {
                 const cardEl = cardList.createDiv({ cls: 'smart-vault-flashcard' });
 
-                let q, a;
+                let q: string = '', a: string = '';
                 if (typeof card === 'string') {
                     [q, a] = card.split('::');
                 } else {
-                    q = card.question;
-                    a = card.answer;
+                    q = card.question || '';
+                    a = card.answer || '';
                 }
 
                 cardEl.createDiv({ text: `Q: ${q}`, cls: 'flashcard-q' });
@@ -337,14 +372,18 @@ export class FormattingTab extends BaseTab {
 
                 const addBtn = cardEl.createEl('button', { text: 'Add', cls: 'smart-vault-mini-btn smart-vault-flashcard-add-btn' });
                 addBtn.onclick = async () => {
-                    await this.app.vault.append(file, `\n${card}\n`);
+                    const cardText = typeof card === 'string' ? card : `${q}::${a}`;
+                    await this.app.vault.append(file, `\n${cardText}\n`);
                     new Notice('Flashcard added');
                     cardEl.remove();
                 };
             });
 
             appendBtn.onclick = async () => {
-                const cardsText = '\n\n### Flashcards\n' + result.flashcards.join('\n') + '\n';
+                const cardsText = '\n\n### Flashcards\n' + result.flashcards.map((c) => {
+                    if (typeof c === 'string') return c;
+                    return `${c.question}::${c.answer}`;
+                }).join('\n') + '\n';
                 await this.app.vault.append(file, cardsText);
                 new Notice('Flashcards appended!');
             };
@@ -440,7 +479,8 @@ export class FormattingTab extends BaseTab {
                 }
             });
         } catch (error) {
-            new Notice('Failed to add tag: ' + error);
+            const e = error as Error;
+            new Notice(`Failed to add tag: ${e.message || e}`);
         }
     }
 }

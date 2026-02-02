@@ -1,6 +1,5 @@
-
-import { App, ItemView } from 'obsidian';
-import SmartVaultPlugin from '../../main';
+import { App, TFile } from 'obsidian';
+import SmartVaultPlugin from '../../plugin/SmartVaultPlugin';
 
 export abstract class BaseTab {
     app: App;
@@ -16,5 +15,5 @@ export abstract class BaseTab {
     abstract render(): void;
     abstract onOpen(): Promise<void>;
     abstract onClose(): Promise<void>;
-    abstract setFileContext(file: any): void;
+    abstract setFileContext(file: TFile): void;
 }

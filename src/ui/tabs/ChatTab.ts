@@ -1,11 +1,30 @@
 import { App, TFile, setIcon, MarkdownView, MarkdownRenderer, Notice } from 'obsidian';
 import { BaseTab } from './BaseTab';
 import SmartVaultPlugin from '../../plugin/SmartVaultPlugin';
+import { ConfirmModal } from '../../ui/ConfirmModal';
 import { CONSTANTS } from '../../constants';
 import { PROMPTS } from '../../prompts';
 
+/**
+ * Interface for a chat message
+ */
+export interface ChatMessage {
+    role: string;
+    content: string;
+    sources?: string[];
+}
+
+/**
+ * Interface for a chat action extracted from AI response
+ */
+interface ChatAction {
+    type: string;
+    title: string;
+    content: string;
+}
+
 export class ChatTab extends BaseTab {
-    private history: { role: string, content: string, sources?: string[] }[] = [];
+    private history: ChatMessage[] = [];
     private currentFile: TFile | null = null;
     private activeContextFiles: TFile[] | null = null;
     private chatMode: 'strict' | 'vault' | 'general' = 'vault';
@@ -21,10 +40,12 @@ export class ChatTab extends BaseTab {
     async onOpen(): Promise<void> {
         this.shouldFocusInput = true;
         this.render();
+        await Promise.resolve();
     }
 
     async onClose(): Promise<void> {
         // Cleanup if needed
+        await Promise.resolve();
     }
 
     setFileContext(file: TFile): void {
@@ -91,12 +112,12 @@ export class ChatTab extends BaseTab {
         modeSelect.createEl('option', { value: 'general', text: '🧠 General' });
         modeSelect.value = this.chatMode;
         modeSelect.onchange = () => {
-            this.chatMode = modeSelect.value as any;
+            this.chatMode = modeSelect.value as 'strict' | 'vault' | 'general';
             this.render();
         };
 
         // New Chat Button
-        const newChatBtn = controlsRow.createEl('button', { text: '✨ New Chat', cls: 'smart-vault-mini-btn smart-vault-new-chat-btn' });
+        const newChatBtn = controlsRow.createEl('button', { text: '✨ New chat', cls: 'smart-vault-mini-btn smart-vault-new-chat-btn' });
         newChatBtn.onclick = () => {
             this.history = [];
             this.contextDetached = false;
@@ -106,7 +127,7 @@ export class ChatTab extends BaseTab {
         };
 
         // History Toggle
-        const historyBtn = controlsRow.createEl('button', { text: '📜', title: 'View History', cls: `smart-vault-icon-btn smart-vault-history-btn ${this.showHistory ? 'active' : ''}` });
+        const historyBtn = controlsRow.createEl('button', { text: '📜', title: 'View history', cls: `smart-vault-icon-btn smart-vault-history-btn ${this.showHistory ? 'active' : ''}` });
         historyBtn.onclick = () => { this.showHistory = !this.showHistory; this.render(); };
 
         // Row 2: Context Indicator
@@ -128,7 +149,7 @@ export class ChatTab extends BaseTab {
             // Toggle Details
             header.onclick = () => { this.showContextSources = !this.showContextSources; this.render(); };
         } else {
-            const label = contextRow.createSpan({ text: this.currentFile ? `📄 ${this.currentFile.basename}` : 'No Active Note', cls: 'smart-vault-context-status' });
+            const _label = contextRow.createSpan({ text: this.currentFile ? `📄 ${this.currentFile.basename}` : 'No Active Note', cls: 'smart-vault-context-status' });
             if (this.currentFile) {
                 const detachBtn = contextRow.createEl('button', { text: '✕', title: 'Detach Context', cls: 'smart-vault-icon-btn smart-vault-detach-btn' });
                 detachBtn.onclick = () => { this.contextDetached = true; this.render(); };
@@ -152,26 +173,25 @@ export class ChatTab extends BaseTab {
         // Null check for plugin/cacheManager
         if (!this.plugin.cacheManager) return;
 
-        const historyContainer = container.createDiv({ cls: 'smart-vault-history-view', attr: { style: 'padding: 10px; overflow-y: auto; flex-grow: 1;' } });
+        const historyContainer = container.createDiv({ cls: 'smart-vault-history-view smart-vault-padding-10 smart-vault-overflow-auto smart-vault-flex-grow' });
         historyContainer.createEl('h2', { text: 'Conversation History' });
 
         const history = await this.plugin.cacheManager.loadChatHistory();
         const files = Object.keys(history);
 
         if (files.length === 0) {
-            historyContainer.createDiv({ text: 'No history found.', attr: { style: 'font-style: italic; opacity: 0.6;' } });
+            historyContainer.createDiv({ text: 'No history found.', cls: 'smart-vault-italic' });
             return;
         }
 
-        const list = historyContainer.createEl('ul', { attr: { style: 'list-style: none; padding: 0;' } });
+        const list = historyContainer.createEl('ul', { cls: 'smart-vault-list-none' });
 
         for (const filePath of files) {
-            const item = list.createEl('li', { attr: { style: 'padding: 8px; border-bottom: 1px solid var(--background-modifier-border); display: flex; justify-content: space-between; align-items: center;' } });
-            item.className = 'smart-vault-history-item';
+            const item = list.createEl('li', { cls: 'smart-vault-history-item smart-vault-padding-8 smart-vault-border-bottom smart-vault-flex-row smart-vault-space-between smart-vault-center' });
 
-            const infoDiv = item.createDiv({ attr: { style: 'flex-grow: 1; cursor: pointer;' } });
-            infoDiv.createSpan({ text: filePath.split('/').pop()?.replace('.md', '') || filePath, attr: { style: 'font-weight: 500;' } });
-            infoDiv.createSpan({ text: ` (${history[filePath].length} msgs)`, attr: { style: 'font-size: 0.8em; opacity: 0.7; margin-left: 8px;' } });
+            const infoDiv = item.createDiv({ cls: 'smart-vault-flex-grow smart-vault-pointer' });
+            infoDiv.createSpan({ text: filePath.split('/').pop()?.replace('.md', '') || filePath, cls: 'smart-vault-bold' });
+            infoDiv.createSpan({ text: ` (${history[filePath].length} msgs)`, cls: 'smart-vault-small smart-vault-muted' });
 
             // Delete Button
             const deleteBtn = item.createEl('button', { text: '🗑️', title: 'Delete History', cls: 'smart-vault-mini-btn smart-vault-history-delete-btn' });
@@ -189,10 +209,18 @@ export class ChatTab extends BaseTab {
 
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
-                if (confirm(`Delete chat history for ${filePath}?`) && this.plugin.cacheManager) {
-                    await this.plugin.cacheManager.deleteChatHistory(filePath);
-                    this.renderHistoryView(container); // Re-render
-                }
+                new ConfirmModal(
+                    this.app,
+                    'Delete chat history',
+                    `Are you sure you want to delete the chat history for ${filePath}?`,
+                    async (confirmed) => {
+                        if (confirmed && this.plugin.cacheManager) {
+                            await this.plugin.cacheManager.deleteChatHistory(filePath);
+                            this.renderHistoryView(container); // Re-render
+                        }
+                    },
+                    'Delete'
+                ).open();
             };
         }
 
@@ -202,9 +230,9 @@ export class ChatTab extends BaseTab {
     renderMessages(content: HTMLElement) {
         // Source List Render
         if (this.activeContextFiles && this.activeContextFiles.length > 0 && this.showContextSources && !this.contextDetached) {
-            const list = content.createDiv({ cls: 'smart-vault-source-list', attr: { style: 'max-height: 100px; overflow-y: auto; margin: 0 10px 10px 10px; border: 1px solid var(--background-modifier-border); padding: 5px; border-radius: 4px; font-size: 0.9em;' } });
+            const list = content.createDiv({ cls: 'smart-vault-source-list smart-vault-overflow-auto smart-vault-padding-8 smart-vault-border-radius-4 smart-vault-small' });
             this.activeContextFiles.forEach(f => {
-                list.createDiv({ text: f.basename, attr: { style: 'padding: 2px 0;' } });
+                list.createDiv({ text: f.basename, cls: 'smart-vault-padding-8' });
             });
         }
 
@@ -212,7 +240,7 @@ export class ChatTab extends BaseTab {
         const chatArea = content.createDiv({ cls: 'smart-vault-chat-area' });
 
         // Render history
-        this.history.forEach(msg => {
+        this.history.forEach((msg: ChatMessage) => {
             const msgDiv = chatArea.createDiv({ cls: `chat-message ${msg.role}` });
             const header = msgDiv.createDiv({ cls: 'chat-message-header' });
             header.createSpan({ text: msg.role === 'user' ? 'You' : 'AI', cls: 'chat-author' });
@@ -287,7 +315,7 @@ export class ChatTab extends BaseTab {
     }
 
     private async processUserMessage(userMsg: string) {
-        const loadingMsg = { role: 'assistant', content: 'Thinking...' };
+        const loadingMsg: ChatMessage = { role: 'assistant', content: 'Thinking...' };
         this.history.push(loadingMsg);
         this.render();
 
@@ -295,7 +323,7 @@ export class ChatTab extends BaseTab {
             let context = "";
             let vaultContext = "";
             let agenticContext = ""; // Result of Tools
-            let usedSources: string[] = [];
+            const usedSources: string[] = [];
             const model = this.plugin.settings.chatModel || this.plugin.settings.llmModel;
             const { wasmModule } = this.plugin;
 
@@ -325,7 +353,7 @@ export class ChatTab extends BaseTab {
                         this.currentFile = activeFile;
                         const fileContent = await this.app.vault.read(activeFile);
                         const view = this.getActiveEditor(activeFile);
-                        let selection = view ? view.editor.getSelection() : "";
+                        const selection = view ? view.editor.getSelection() : "";
 
                         context = `CURRENT FILE: ${activeFile.basename}\n`;
                         if (selection) context += `USER SELECTION:\n"${selection}"\n\n`;
@@ -382,9 +410,12 @@ export class ChatTab extends BaseTab {
                         }
                         // In General Mode, if no results, we just don't add vaultContext (leave it empty)
                     }
-                } catch (e: any) {
-                    console.warn("RAG failed:", e);
-                    new Notice(`RAG Failed: ${e.message || e}`, 0); // 0 = Persistent
+                } catch (e) {
+                    const error = e as Error;
+                    if (this.plugin.settings.debugMode) {
+                        console.warn("RAG failed:", error);
+                    }
+                    new Notice(`RAG Failed: ${error.message || error}`, 0); // 0 = Persistent
                 }
             }
 
@@ -441,9 +472,10 @@ export class ChatTab extends BaseTab {
                 await this.plugin.cacheManager.saveChatHistory(history);
             }
 
-        } catch (e: any) {
+        } catch (e) {
+            const error = e as Error;
             this.history.pop();
-            this.history.push({ role: 'assistant', content: `Error: ${e.message || e}` });
+            this.history.push({ role: 'assistant', content: `Error: ${error.message || error}` });
             this.render();
         }
     }
@@ -503,7 +535,7 @@ export class ChatTab extends BaseTab {
             const content = await this.app.vault.read(file);
             const lines = content.split('\n');
             let fileTasks = "";
-            lines.forEach((line, i) => {
+            lines.forEach((line, _i) => {
                 // Match "- [ ] " or "* [ ] " ignoring indentation
                 if (/^\s*[-*]\s*\[ \]\s+/.test(line)) {
                     fileTasks += `   - ${line.trim()} (in [[${file.basename}]])\n`;
@@ -547,8 +579,8 @@ export class ChatTab extends BaseTab {
             // Clean title
             title = title.replace(/[\\/:*?"<>|]/g, '-');
 
-            let path = `${title}.md`;
-            let file = this.app.vault.getAbstractFileByPath(path);
+            const path = `${title}.md`;
+            const file = this.app.vault.getAbstractFileByPath(path);
 
             // Handle duplicate
             if (file) {
@@ -556,11 +588,12 @@ export class ChatTab extends BaseTab {
             }
 
             try {
-                const newFile = await this.app.vault.create(path, `# ${title}\n\nCreated by Smart Vault AI.\n`);
+                const _newFile = await this.app.vault.create(path, `# ${title}\n\nCreated by Smart Vault AI.\n`);
                 // Open the new file? Maybe not, just notify.
                 return `SYSTEM ACTION: Successfully created new note [[${title}]].`;
-            } catch (e: any) {
-                return `SYSTEM ERROR: Failed to create note "${title}". ${e.message}`;
+            } catch (e) {
+                const error = e as Error;
+                return `SYSTEM ERROR: Failed to create note "${title}". ${error.message}`;
             }
         }
         return "";
@@ -604,8 +637,9 @@ export class ChatTab extends BaseTab {
             view.editor.replaceRange(content + "\n", cursor);
 
             return `SYSTEM ACTION: Successfully inserted text about "${topic}" into [[${view.file?.basename}]].`;
-        } catch (e: any) {
-            return `SYSTEM ERROR: Failed to generate/insert text. ${e.message}`;
+        } catch (e) {
+            const error = e as Error;
+            return `SYSTEM ERROR: Failed to generate/insert text. ${error.message}`;
         }
     }
 
@@ -715,9 +749,9 @@ Analyze the content of these two notes. Identify:
 
     // --- Agentic Actions ---
 
-    private extractActions(response: string): { actions: { type: string, title: string, content: string }[], cleanResponse: string } {
+    private extractActions(response: string): { actions: ChatAction[], cleanResponse: string } {
         const actionRegex = /\[\[ACTION:(CreateNote|AppendNote)\|([^|]+)\|([\s\S]+?)\]\]/g;
-        const actions: { type: string, title: string, content: string }[] = [];
+        const actions: ChatAction[] = [];
         let cleanResponse = response;
         let match;
 
@@ -734,7 +768,7 @@ Analyze the content of these two notes. Identify:
         return { actions, cleanResponse };
     }
 
-    private async executeAction(action: { type: string, title: string, content: string }): Promise<string> {
+    private async executeAction(action: ChatAction): Promise<string> {
         try {
             const fileName = action.title.endsWith('.md') ? action.title : `${action.title}.md`;
 
@@ -762,8 +796,9 @@ Analyze the content of these two notes. Identify:
             }
 
             return `❌ Unknown action type: ${action.type}`;
-        } catch (e: any) {
-            return `❌ Error executing ${action.type}: ${e.message}`;
+        } catch (e) {
+            const error = e as Error;
+            return `❌ Error executing ${action.type}: ${error.message}`;
         }
     }
 

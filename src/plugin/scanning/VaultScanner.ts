@@ -4,6 +4,8 @@ import type { RerankerService } from '../../llm/RerankerService';
 import type { CacheManager } from '../cache/CacheManager';
 import type { FileProcessor } from './FileProcessor';
 import { truncateContent } from '../../utils/content';
+import * as wasmNamespace from '../../../pkg/obsidian_smart_vault';
+import type { LinkSuggestionView } from '../../ui/LinkSuggestionView';
 
 /**
  * Represents a file in the scan plan
@@ -33,23 +35,23 @@ interface ScanPlan {
  */
 export class VaultScanner {
     private app: App;
-    private smartVault: any;
-    private wasmModule: any;
+    private smartVault: wasmNamespace.SmartVault;
+    private wasmModule: typeof wasmNamespace;
     private rerankerService: RerankerService;
     private cacheManager: CacheManager;
     private fileProcessor: FileProcessor;
     private settings: SmartVaultSettings;
-    private suggestionView: any;
+    private suggestionView: LinkSuggestionView | null;
 
     constructor(
         app: App,
-        smartVault: any,
-        wasmModule: any,
+        smartVault: wasmNamespace.SmartVault,
+        wasmModule: typeof wasmNamespace,
         rerankerService: RerankerService,
         cacheManager: CacheManager,
         fileProcessor: FileProcessor,
         settings: SmartVaultSettings,
-        suggestionView: any,
+        suggestionView: LinkSuggestionView | null,
         // Kept for backward compatibility but no longer used
         _fileModificationTimes: Map<string, number>
     ) {
@@ -73,7 +75,7 @@ export class VaultScanner {
     /**
      * Update the suggestion view reference.
      */
-    updateSuggestionView(suggestionView: any): void {
+    updateSuggestionView(suggestionView: LinkSuggestionView | null): void {
         this.suggestionView = suggestionView;
     }
 
@@ -87,7 +89,7 @@ export class VaultScanner {
      */
     async scanVault(notice: Notice): Promise<string> {
         if (this.settings.debugMode) {
-            console.log('[DEBUG] Starting vault scan');
+            console.debug('[DEBUG] Starting vault scan');
         }
 
         const allFiles = this.app.vault.getMarkdownFiles();
@@ -107,7 +109,7 @@ export class VaultScanner {
             const filterMsg = this.settings.debugFolderFilter
                 ? ` (filtered to ${this.settings.debugFolderFilter} only)`
                 : '';
-            console.log(`[DEBUG] Found ${files.length} markdown files to scan${filterMsg}`);
+            console.debug(`[DEBUG] Found ${files.length} markdown files to scan${filterMsg}`);
         }
 
         // Use Rust scan planning for optimized file ordering and filtering
@@ -131,11 +133,11 @@ export class VaultScanner {
         skippedUnchanged = scanPlan.to_skip.length;
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Scan plan: ${scanPlan.to_process.length} to process, ${scanPlan.to_skip.length} unchanged`);
+            console.debug(`[DEBUG] Scan plan: ${scanPlan.to_process.length} to process, ${scanPlan.to_skip.length} unchanged`);
             if (scanPlan.current_file_index !== null) {
-                console.log(`[DEBUG] Current file index: ${scanPlan.current_file_index}`);
+                console.debug(`[DEBUG] Current file index: ${scanPlan.current_file_index}`);
             }
-            console.log(`[DEBUG] Using concurrency: ${this.settings.llmConcurrency} parallel LLM requests`);
+            console.debug(`[DEBUG] Using concurrency: ${this.settings.llmConcurrency} parallel LLM requests`);
         }
 
         // Convert plan to TFile array
@@ -167,7 +169,7 @@ export class VaultScanner {
                     // Log error with file path for debugging
                     console.error(`[ERROR] Failed to process file "${file.path}":`, result.reason);
                     if (this.settings.debugMode) {
-                        console.log(`[DEBUG] Error details for ${file.path}:`, {
+                        console.debug(`[DEBUG] Error details for ${file.path}:`, {
                             error: result.reason?.message || result.reason,
                             stack: result.reason?.stack
                         });
@@ -188,19 +190,19 @@ export class VaultScanner {
 
             // Save embeddings periodically (every 3 batches)
             if (Math.floor(i / batchSize) % 3 === 0) {
-                await this.cacheManager.saveEmbeddings();
+                this.cacheManager.saveEmbeddings();
             }
         }
 
         // Final save
-        await this.cacheManager.saveEmbeddings();
+        this.cacheManager.saveEmbeddings();
         await this.cacheManager.saveKeywords();
         await this.cacheManager.saveSuggestions(this.suggestionView);
 
         // Refresh the current file's view with all the new embeddings
         if (this.suggestionView && currentFile) {
             if (this.settings.debugMode) {
-                console.log('[DEBUG] Refreshing current file view after scan');
+                console.debug('[DEBUG] Refreshing current file view after scan');
             }
             await this.suggestionView.updateForFile(currentFile);
         }
@@ -216,7 +218,7 @@ export class VaultScanner {
         }
 
         if (this.settings.debugMode) {
-            console.log('[DEBUG] Scan complete');
+            console.debug('[DEBUG] Scan complete');
         }
 
         // Return the message for the caller to display
@@ -228,7 +230,7 @@ export class VaultScanner {
      */
     private async scanVaultLegacy(notice: Notice, files: TFile[], currentFile: TFile | null): Promise<string> {
         if (this.settings.debugMode) {
-            console.log('[DEBUG] Using legacy scan method');
+            console.debug('[DEBUG] Using legacy scan method');
         }
 
         // Sort files: current file first, then by modification time (most recent first)
@@ -264,11 +266,11 @@ export class VaultScanner {
             notice.setMessage(`Scanning: ${processed}/${files.length} files (${newEmbeddings} new)`);
 
             if (Math.floor(i / batchSize) % 3 === 0) {
-                await this.cacheManager.saveEmbeddings();
+                this.cacheManager.saveEmbeddings();
             }
         }
 
-        await this.cacheManager.saveEmbeddings();
+        this.cacheManager.saveEmbeddings();
         await this.cacheManager.saveKeywords();
         await this.cacheManager.saveSuggestions(this.suggestionView);
 
@@ -302,7 +304,7 @@ export class VaultScanner {
         // Skip unchanged files if they already have embeddings
         if (hasEmbedding && embeddingFresh) {
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Skipping unchanged file: ${file.basename}`);
+                console.debug(`[DEBUG] Skipping unchanged file: ${file.basename}`);
             }
             return { file, wasNewEmbedding: false, suggestionsCount: 0 };
         }
@@ -313,13 +315,13 @@ export class VaultScanner {
         this.smartVault.add_file(file.path, content);
 
         // Generate embedding if needed
-        let needsEmbedding = !hasEmbedding;
+        const needsEmbedding = !hasEmbedding;
         let wasNewEmbedding = false;
         let embedding: number[];
 
         if (needsEmbedding) {
             embedding = await this.rerankerService.generateEmbedding(truncatedContent);
-            this.smartVault.set_embedding(file.path, embedding);
+            this.smartVault.set_embedding(file.path, new Float32Array(embedding));
             this.cacheManager.markEmbeddingProcessed(file.path, currentMtime);
             wasNewEmbedding = true;
 
@@ -327,12 +329,13 @@ export class VaultScanner {
             await this.extractKeywords(file, truncatedContent, currentMtime);
         } else {
             // Reuse existing embedding but update mtime
-            embedding = this.smartVault.get_embedding(file.path);
+            const cachedEmb = this.smartVault.get_embedding(file.path);
+            embedding = cachedEmb ? Array.from(cachedEmb) : [];
             this.cacheManager.markEmbeddingProcessed(file.path, currentMtime);
         }
 
         // Generate suggestions immediately for this file
-        let suggestions: any[] = [];
+        let suggestions: import('../../ui/LinkSuggestionView').LinkSuggestion[] = [];
         if (this.suggestionView) {
             // Respect Manual Rerank setting during vault scan
             const skipLLM = this.settings.manualLLMRerank;
@@ -346,7 +349,7 @@ export class VaultScanner {
             // Update view if this is the current file (real-time update)
             if (currentFile && file.path === currentFile.path) {
                 if (this.settings.debugMode) {
-                    console.log('[DEBUG] Updating view for current file');
+                    console.debug('[DEBUG] Updating view for current file');
                 }
                 this.suggestionView.setSuggestions(suggestions, file);
             }
@@ -394,11 +397,11 @@ export class VaultScanner {
                 this.cacheManager.markKeywordProcessed(file.path, mtime);
 
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] Extracted ${keywords.length} keywords for ${file.basename} (including title)`);
+                    console.debug(`[DEBUG] Extracted ${keywords.length} keywords for ${file.basename} (including title)`);
                 }
             } catch (error) {
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] Failed to extract keywords for ${file.basename}:`, error);
+                    console.debug(`[DEBUG] Failed to extract keywords for ${file.basename}:`, error);
                 }
                 // Even if LLM fails, set the title as a keyword
                 const titleKeyword = file.basename.replace(/\.md$/, '');

@@ -1,7 +1,9 @@
-import type { App, Notice, TFile } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import type { SmartVaultSettings } from '../../settings/types';
 import type { RerankerService } from '../../llm/RerankerService';
 import { truncateContent } from '../../utils/content';
+import * as wasmNamespace from '../../../pkg/obsidian_smart_vault';
+import type { LinkSuggestionView } from '../../ui/LinkSuggestionView';
 
 /**
  * Service responsible for processing individual files in the vault.
@@ -10,17 +12,17 @@ import { truncateContent } from '../../utils/content';
  */
 export class FileProcessor {
     private app: App;
-    private smartVault: any;
+    private smartVault: wasmNamespace.SmartVault;
     public rerankerService: RerankerService;
     private settings: SmartVaultSettings;
-    private suggestionView: any;
+    private suggestionView: LinkSuggestionView | null;
 
     constructor(
         app: App,
-        smartVault: any,
+        smartVault: wasmNamespace.SmartVault,
         rerankerService: RerankerService,
         settings: SmartVaultSettings,
-        suggestionView: any
+        suggestionView: LinkSuggestionView | null
     ) {
         this.app = app;
         this.smartVault = smartVault;
@@ -39,7 +41,7 @@ export class FileProcessor {
     /**
      * Update the suggestion view reference.
      */
-    updateSuggestionView(suggestionView: any): void {
+    updateSuggestionView(suggestionView: LinkSuggestionView | null): void {
         this.suggestionView = suggestionView;
     }
 
@@ -53,15 +55,15 @@ export class FileProcessor {
     async refreshDocument(
         file: TFile,
         saveEmbeddings: () => Promise<void>
-    ): Promise<any[]> {
+    ): Promise<import('../../ui/LinkSuggestionView').LinkSuggestion[]> {
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Refresh requested for: ${file.path}`);
+            console.debug(`[DEBUG] Refresh requested for: ${file.path}`);
         }
 
         const content = await this.app.vault.read(file);
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Read file content, length: ${content.length}`);
+            console.debug(`[DEBUG] Read file content, length: ${content.length}`);
         }
 
         // Truncate content if too long for embedding
@@ -71,22 +73,22 @@ export class FileProcessor {
         this.smartVault.add_file(file.path, content);
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Generating new embedding...`);
+            console.debug(`[DEBUG] Generating new embedding...`);
         }
 
         // Regenerate embedding
         const embedding = await this.rerankerService.generateEmbedding(truncatedContent);
-        this.smartVault.set_embedding(file.path, embedding);
+        this.smartVault.set_embedding(file.path, new Float32Array(embedding));
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Embedding generated, saving...`);
+            console.debug(`[DEBUG] Embedding generated, saving...`);
         }
 
         // Save embeddings to disk
         await saveEmbeddings();
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Generating suggestions...`);
+            console.debug(`[DEBUG] Generating suggestions...`);
         }
 
         // Generate suggestions with LLM reranking if enabled
@@ -95,7 +97,7 @@ export class FileProcessor {
         const suggestions = await this.getSuggestionsForFile(file, content, embedding, skipLLM);
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Got ${suggestions.length} suggestions, updating view...`);
+            console.debug(`[DEBUG] Got ${suggestions.length} suggestions, updating view...`);
         }
 
         // Update suggestion view
@@ -105,7 +107,7 @@ export class FileProcessor {
         }
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Refresh complete!`);
+            console.debug(`[DEBUG] Refresh complete!`);
         }
 
         return suggestions;
@@ -126,22 +128,22 @@ export class FileProcessor {
         embedding: number[],
         skipLLM: boolean = false,
         forceLLMRefresh: boolean = false
-    ): Promise<any[]> {
+    ): Promise<import('../../ui/LinkSuggestionView').LinkSuggestion[]> {
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] getSuggestionsForFile: ${file.path}`);
+            console.debug(`[DEBUG] getSuggestionsForFile: ${file.path}`);
         }
 
         // Get initial suggestions from embeddings (already filters self-links in Rust)
         let suggestions = this.smartVault.suggest_links_for_text(
             content,
-            embedding,
+            new Float32Array(embedding),
             this.settings.similarityThreshold,
             file.path,  // Current file to exclude
             20  // Top 20 candidates for LLM reranking
         );
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Embedding-based suggestions: ${suggestions.length} found`);
+            console.debug(`[DEBUG] Embedding-based suggestions: ${suggestions.length} found`);
         }
 
         // Optionally rerank with LLM or check cache
@@ -149,7 +151,7 @@ export class FileProcessor {
             if (!skipLLM) {
                 // Auto mode or explicit rerank: Run LLM (checks cache internally unless forced)
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] LLM reranking enabled, processing ${suggestions.length} suggestions (force: ${forceLLMRefresh})`);
+                    console.debug(`[DEBUG] LLM reranking enabled, processing ${suggestions.length} suggestions (force: ${forceLLMRefresh})`);
                 }
                 const result = await this.rerankerService.rerankSuggestionsWithLLM(
                     file.basename,
@@ -173,7 +175,7 @@ export class FileProcessor {
                 const cachedResult = this.rerankerService.getCachedRerank(suggestions, file.path);
                 if (cachedResult) {
                     if (this.settings.debugMode) {
-                        console.log(`[DEBUG] Manual Mode: Using cached LLM scores for ${file.path}`);
+                        console.debug(`[DEBUG] Manual Mode: Using cached LLM scores for ${file.path}`);
                     }
                     suggestions = cachedResult.suggestions;
                 }
@@ -181,7 +183,7 @@ export class FileProcessor {
         }
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Final suggestions count: ${suggestions.length}`);
+            console.debug(`[DEBUG] Final suggestions count: ${suggestions.length}`);
         }
 
         return suggestions;
@@ -193,7 +195,7 @@ export class FileProcessor {
      * @param file - The active file
      * @returns Promise resolving to array of suggestions
      */
-    async suggestLinksForCurrentNote(file: TFile): Promise<any[]> {
+    async suggestLinksForCurrentNote(file: TFile): Promise<import('../../ui/LinkSuggestionView').LinkSuggestion[]> {
         const content = await this.app.vault.read(file);
         const truncatedContent = truncateContent(content, this.settings.maxContentLength);
         const embedding = await this.rerankerService.generateEmbedding(truncatedContent);
@@ -232,7 +234,7 @@ export class FileProcessor {
 
                 const cached = this.suggestionView.allDocumentSuggestions.get(file.path);
                 if (cached !== undefined) {
-                    const hasLLMScores = cached.some((s: any) => s.llm_score !== undefined);
+                    const hasLLMScores = cached.some((s: import('../../ui/LinkSuggestionView').LinkSuggestion) => s.llm_score !== undefined);
                     if (cached.length === 0 || hasLLMScores || !this.settings.useLLMReranking) {
                         continue;
                     }
@@ -250,7 +252,7 @@ export class FileProcessor {
                     if (this.settings.debugMode) {
                         const cached = this.suggestionView.allDocumentSuggestions.get(file.path);
                         if (cached !== undefined) {
-                            console.log(`[DEBUG] Regenerating ${file.path} - has ${cached.length} suggestions but no LLM scores`);
+                            console.debug(`[DEBUG] Regenerating ${file.path} - has ${cached.length} suggestions but no LLM scores`);
                         }
                     }
 
@@ -278,7 +280,7 @@ export class FileProcessor {
                 } catch (error) {
                     // Silently skip files that error
                     if (this.settings.debugMode) {
-                        console.log(`[DEBUG] Error generating suggestions for ${file.path}:`, error);
+                        console.debug(`[DEBUG] Error generating suggestions for ${file.path}:`, error);
                     }
                     processedCount++;  // Still count for progress
                     if (this.settings.useLLMReranking) {
@@ -293,7 +295,7 @@ export class FileProcessor {
             }
 
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Generated suggestions for ${processedCount} files with embeddings (${suggestionsCount} total suggestions)`);
+                console.debug(`[DEBUG] Generated suggestions for ${processedCount} files with embeddings (${suggestionsCount} total suggestions)`);
             }
         } catch (error) {
             console.error('Error generating all suggestions:', error);

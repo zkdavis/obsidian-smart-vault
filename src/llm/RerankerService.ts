@@ -1,7 +1,7 @@
-import { Notice } from 'obsidian';
 import { SmartVaultSettings } from '../settings/types';
 import { CONSTANTS } from '../constants';
 import type { LLMRerankedSuggestion } from './types';
+import * as wasmNamespace from '../../pkg/obsidian_smart_vault';
 
 /**
  * Result of LLM reranking operation.
@@ -18,7 +18,7 @@ export interface RerankerResult {
  * Handles all interactions with the Ollama API for embedding generation and LLM-based reranking.
  */
 export class RerankerService {
-    private wasmModule: any;
+    private wasmModule: typeof wasmNamespace;
     private settings: SmartVaultSettings;
     // Track in-flight LLM reranking requests to prevent duplicate calls
     private pendingRerankRequests: Map<string, Promise<RerankerResult>> = new Map();
@@ -26,7 +26,7 @@ export class RerankerService {
     private rerankCache: Map<string, { result: RerankerResult; timestamp: number }> = new Map();
     private readonly CACHE_TTL_MS = 60000;  // Cache results for 1 minute
 
-    constructor(wasmModule: any, settings: SmartVaultSettings) {
+    constructor(wasmModule: typeof wasmNamespace, settings: SmartVaultSettings) {
         this.wasmModule = wasmModule;
         this.settings = settings;
     }
@@ -64,7 +64,7 @@ export class RerankerService {
         currentDocTitle: string,
         currentDocContent: string,
         timeoutMs: number
-    ): Promise<any[]> {
+    ): Promise<LLMRerankedSuggestion[]> {
         return await Promise.race([
             this.wasmModule.rerank_suggestions_with_llm(
                 this.settings.ollamaEndpoint,
@@ -76,10 +76,10 @@ export class RerankerService {
                 this.settings.enableThinkingMode,
                 this.settings.debugMode
             ),
-            new Promise((_, reject) =>
+            new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error(`LLM reranking timeout after ${timeoutMs} ms`)), timeoutMs)
             )
-        ]) as any[];
+        ]) as LLMRerankedSuggestion[];
     }
 
     /**
@@ -125,7 +125,7 @@ export class RerankerService {
     ): Promise<RerankerResult> {
         if (!this.settings.useLLMReranking || suggestions.length === 0) {
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Skipping LLM reranking(enabled: ${this.settings.useLLMReranking}, suggestions: ${suggestions.length})`);
+                console.debug(`[DEBUG] Skipping LLM reranking(enabled: ${this.settings.useLLMReranking}, suggestions: ${suggestions.length})`);
             }
             return { suggestions, llmFailed: false };
         }
@@ -139,7 +139,7 @@ export class RerankerService {
             const cached = this.rerankCache.get(cacheKey);
             if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL_MS) {
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] Using cached LLM reranking result for ${docPath}(age: ${Date.now() - cached.timestamp}ms)`);
+                    console.debug(`[DEBUG] Using cached LLM reranking result for ${docPath}(age: ${Date.now() - cached.timestamp}ms)`);
                 }
                 return cached.result;
             }
@@ -148,7 +148,7 @@ export class RerankerService {
             const pending = this.pendingRerankRequests.get(cacheKey);
             if (pending) {
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] Waiting for in -flight LLM reranking request for ${docPath}`);
+                    console.debug(`[DEBUG] Waiting for in -flight LLM reranking request for ${docPath}`);
                 }
                 return pending;
             }
@@ -190,7 +190,7 @@ export class RerankerService {
             const cached = this.rerankCache.get(cacheKey);
             if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL_MS) {
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] Found cached LLM result for ${docPath} (Manual Mode Refresh)`);
+                    console.debug(`[DEBUG] Found cached LLM result for ${docPath} (Manual Mode Refresh)`);
                 }
                 return cached.result;
             }
@@ -213,25 +213,25 @@ export class RerankerService {
             const embeddingOnlyCandidates = suggestions.slice(this.settings.llmCandidateCount);
 
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] llmCandidateCount setting: ${this.settings.llmCandidateCount}, total suggestions: ${suggestions.length} `);
-                console.log(`[DEBUG] Preparing ${llmCandidates.length} candidates for LLM reranking, ${embeddingOnlyCandidates.length} embedding - only`);
-                console.log(`[DEBUG] Document: "${currentDocTitle}", content length: ${currentDocContent.length} chars`);
+                console.debug(`[DEBUG] llmCandidateCount setting: ${this.settings.llmCandidateCount}, total suggestions: ${suggestions.length} `);
+                console.debug(`[DEBUG] Preparing ${llmCandidates.length} candidates for LLM reranking, ${embeddingOnlyCandidates.length} embedding - only`);
+                console.debug(`[DEBUG] Document: "${currentDocTitle}", content length: ${currentDocContent.length} chars`);
             }
 
             // Convert to JSON for WASM
             const candidatesJson = JSON.stringify(llmCandidates);
 
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Candidates JSON length: ${candidatesJson.length} chars`);
+                console.debug(`[DEBUG] Candidates JSON length: ${candidatesJson.length} chars`);
             }
 
             if (this.settings.debugMode) {
-                console.log(`Reranking ${llmCandidates.length} suggestions with LLM...`);
+                console.debug(`Reranking ${llmCandidates.length} suggestions with LLM...`);
             }
 
             // Add timeout with retry logic to prevent scan from hanging indefinitely
             const timeoutMs = this.settings.llmTimeout || 15000;
-            let reranked: any[];
+            let reranked: LLMRerankedSuggestion[] = [];
 
             // Try up to 2 times before giving up
             for (let attempt = 1; attempt <= 2; attempt++) {
@@ -244,17 +244,18 @@ export class RerankerService {
                     );
                     // Success - break out of retry loop
                     break;
-                } catch (error: any) {
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
                     if (attempt === 1) {
                         // First failure - wait with backoff before retry to let LLM recover
                         if (this.settings.debugMode) {
-                            console.log(`[DEBUG] LLM reranking attempt ${attempt} failed: ${error.message}. Waiting ${CONSTANTS.LLM_RETRY_DELAY_MS}ms before retry...`);
+                            console.debug(`[DEBUG] LLM reranking attempt ${attempt} failed: ${errorMessage}. Waiting ${CONSTANTS.LLM_RETRY_DELAY_MS}ms before retry...`);
                         }
                         await new Promise(resolve => setTimeout(resolve, CONSTANTS.LLM_RETRY_DELAY_MS));
                     } else {
                         // Second failure - will show visual warning on page
                         if (this.settings.debugMode) {
-                            console.log(`[DEBUG] LLM reranking attempt ${attempt} failed: ${error.message}. Giving up.`);
+                            console.debug(`[DEBUG] LLM reranking attempt ${attempt} failed: ${errorMessage}. Giving up.`);
                         }
                         throw error; // Re-throw to trigger fallback with llmFailed flag
                     }
@@ -262,19 +263,19 @@ export class RerankerService {
             }
 
             if (this.settings.debugMode) {
-                console.log(`LLM reranking complete.Got ${reranked!.length} results.`);
+                console.debug(`LLM reranking complete.Got ${reranked.length} results.`);
             }
 
             // Append embedding-only candidates (those beyond llmCandidateCount)
             // But also recover any candidates sent to LLM but NOT returned (LLM might have skipped them)
-            const allResults = [...reranked!];
-            const returnedPaths = new Set(reranked!.map(r => r.path));
+            const allResults = [...reranked];
+            const returnedPaths = new Set(reranked.map(r => r.path));
 
             // Find candidates that were sent to LLM but not returned
             const missingLLMCandidates = llmCandidates.filter(c => !returnedPaths.has(c.path));
 
             if (this.settings.debugMode && missingLLMCandidates.length > 0) {
-                console.log(`[DEBUG] Recovering ${missingLLMCandidates.length} candidates dropped by LLM:`, missingLLMCandidates.map(c => c.title));
+                console.debug(`[DEBUG] Recovering ${missingLLMCandidates.length} candidates dropped by LLM:`, missingLLMCandidates.map(c => c.title));
             }
 
             // Append missing LLM candidates (demoted below explicit LLM results)
@@ -303,8 +304,8 @@ export class RerankerService {
             }
 
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Total results: ${allResults.length} (${reranked!.length} LLM - ranked, ${embeddingOnlyCandidates.length} embedding - only)`);
-                console.log(`[DEBUG] Reranked results: `, allResults);
+                console.debug(`[DEBUG] Total results: ${allResults.length} (${reranked.length} LLM - ranked, ${embeddingOnlyCandidates.length} embedding - only)`);
+                console.debug(`[DEBUG] Reranked results: `, allResults);
             }
 
             const result: RerankerResult = { suggestions: allResults, llmFailed: false };
@@ -315,18 +316,19 @@ export class RerankerService {
             }
 
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             // LLM reranking failed - fall back to embedding-only suggestions
             // This is expected when the LLM doesn't return valid JSON array format
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] LLM reranking failed for ${suggestions.length} candidates - using embedding - only ranking`);
-                console.log('[DEBUG] Error:', error);
+                console.debug(`[DEBUG] LLM reranking failed for ${suggestions.length} candidates - using embedding - only ranking`);
+                console.debug('[DEBUG] Error:', error);
             }
             // Fallback to original suggestions on error with failure flag
+            const errorMessage = error instanceof Error ? error.message : 'LLM reranking failed';
             return {
                 suggestions,
                 llmFailed: true,
-                failureReason: error.message || 'LLM reranking failed'
+                failureReason: errorMessage
             };
         } finally {
             // Always clean up pending request tracker

@@ -1,18 +1,18 @@
 
 import { Extension, RangeSetBuilder } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import { App, editorLivePreviewField } from "obsidian";
+import { App } from "obsidian";
 import type SmartVaultPlugin from "../plugin/SmartVaultPlugin";
 
 export function inlineSuggestionExtension(app: App, plugin: SmartVaultPlugin): Extension {
     return ViewPlugin.fromClass(class {
         decorations: DecorationSet;
 
-        constructor(view: EditorView) {
+        constructor(_view: EditorView) {
             this.decorations = Decoration.none;
         }
 
-        update(update: ViewUpdate) {
+        update(_update: ViewUpdate) {
             if (!plugin.settings.enableHoverPreviews) {
                 this.decorations = Decoration.none;
                 return;

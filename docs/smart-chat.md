@@ -9,6 +9,14 @@ Smart Chat provides context-aware Q&A about your notes using RAG (Retrieval-Augm
 3. **Prompt construction** - Your question + context is formatted for the LLM
 4. **Response generation** - LLM generates a contextual answer
 
+### Chat Modes
+
+Smart Chat supports three distinct modes for context retrieval:
+
+- **🛡️ Strict Mode**: Only answers using the provided context (current file or selection). High precision, zero hallucination.
+- **🌍 Vault Mode**: Automatically retrieves up to 5 relevant notes from your entire vault (RAG) using semantic similarity.
+- **🧠 General Mode**: Uses the LLM's general knowledge combined with any available vault context. 
+
 ## Features
 
 ### Context-Aware Responses
@@ -23,22 +31,37 @@ When enabled, the chat automatically retrieves relevant notes from your vault to
 - "Do I have any notes about X?"
 - "What did I write about Y?"
 
-### Agentic Tools
+### Agentic Tools & Actions
 
-Smart Chat includes special commands for direct actions:
+The chat is "agentic," meaning it can understand your intent and perform actions within your vault.
 
-| Command | Description |
-| ------- | ----------- |
-| `Insert paragraph about X` | Writes content directly to your note |
-| `Compare Note A and B` | Performs semantic comparison between notes |
-| `Summarize` | Creates a summary of the current note |
+#### Smart Insert
+Triggered by keywords like "Insert", "Write", "Generate".
+- **Command**: `Insert a paragraph about the benefits of probiotics.`
+- **Action**: The AI generates relevant text and inserts it directly at your current cursor position in the active note.
+
+#### Cross-Link Analysis
+Triggered by keywords like "Compare", "Connection", "Link".
+- **Command**: `Compare [[Note A]] and [[Note B]]`
+- **Action**: Performs a deep semantic analysis of both notes, identifying shared themes, contradictions, and potential "bridge note" connections.
+
+#### Vault Queries
+- **Recent Files**: "What did I work on today?"
+- **Pending Tasks**: "Find my TODOs from my daily notes."
+- **Vault Stats**: "How many notes do I have?"
+
+#### Context Actions (Editor)
+Directly available from the file/editor context menu:
+- **Summarize**: Generates a concise summary based on the note's key points.
+- **Extract Outline**: Identifies the logical structure and headings.
 
 ## Usage
 
 1. Open the Smart Vault sidebar (brain icon)
 2. Click the "Chat" tab
-3. Type your question in the input field
-4. Press Enter or click Send
+3. Select your **Mode** (Strict, Vault, or General) from the dropdown
+4. Type your question or action in the input field
+5. Press Enter or click **Send**
 
 ### Example Questions
 

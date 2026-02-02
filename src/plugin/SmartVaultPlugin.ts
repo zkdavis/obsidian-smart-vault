@@ -1,4 +1,4 @@
-import { App, Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView, Modal } from 'obsidian';
+import { App, Plugin, TFile, Notice, Editor, MarkdownView, Modal } from 'obsidian';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { SmartVaultSettings, DEFAULT_SETTINGS } from '../settings/types';
 import { SmartVaultSettingTab } from '../settings/SmartVaultSettings';
@@ -12,6 +12,9 @@ import { InlineLinkSuggest } from '../suggest/InlineLinkSuggest';
 import { inlineSuggestionExtension } from '../editor/InlineSuggestionExtension';
 import { truncateContent } from '../utils/content';
 import { CONSTANTS } from '../constants';
+// @ts-ignore
+import wasmBinary from '../../pkg/obsidian_smart_vault_bg.wasm';
+import * as wasmNamespace from '../../pkg/obsidian_smart_vault';
 
 /**
  * Main plugin class for Smart Vault Organizer.
@@ -19,15 +22,14 @@ import { CONSTANTS } from '../constants';
  */
 export default class SmartVaultPlugin extends Plugin {
     settings: SmartVaultSettings;
-    wasmModule: any;
-    smartVault: any;
+    wasmModule: typeof wasmNamespace;
+    smartVault: wasmNamespace.SmartVault;
     rerankerService: RerankerService | null = null;
     cacheManager: CacheManager | null = null;
     fileProcessor: FileProcessor | null = null;
     vaultScanner: VaultScanner | null = null;
     handwrittenWatcher: HandwrittenNoteWatcher | null = null;
     scanIntervalId: number | null = null;
-    suggestionView: LinkSuggestionView | null = null;
     inlineSuggest: InlineLinkSuggest | null = null;
     fileModificationTimes: Map<string, number> = new Map();  // Track file mtimes to skip unchanged files
     keywordModificationTimes: Map<string, number> = new Map();  // Track when keywords were extracted
@@ -37,10 +39,24 @@ export default class SmartVaultPlugin extends Plugin {
     private lastOpenedFile: string | null = null;  // Track last opened file to deduplicate events
     private lastOpenedTime: number = 0;  // Track when file was last opened
 
+    /**
+     * Getter for the suggestion view instance.
+     * Finds the view in the workspace instead of storing a reference to avoid memory leaks.
+     */
+    get suggestionView(): LinkSuggestionView | null {
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_SUGGESTIONS);
+        if (leaves.length > 0) {
+            return leaves[0].view as LinkSuggestionView;
+        }
+        return null;
+    }
+
     async onload() {
         await this.loadSettings();
 
-        console.log('Loading Smart Vault plugin...');
+        if (this.settings.debugMode) {
+            console.debug('Loading Smart Vault plugin...');
+        }
 
         try {
             await this.initializeWasm();
@@ -51,17 +67,7 @@ export default class SmartVaultPlugin extends Plugin {
 
         this.registerView(
             VIEW_TYPE_LINK_SUGGESTIONS,
-            (leaf) => {
-                this.suggestionView = new LinkSuggestionView(leaf, this);
-                // Update services with the new suggestionView reference
-                if (this.fileProcessor) {
-                    this.fileProcessor.updateSuggestionView(this.suggestionView);
-                }
-                if (this.vaultScanner) {
-                    this.vaultScanner.updateSuggestionView(this.suggestionView);
-                }
-                return this.suggestionView;
-            }
+            (leaf) => new LinkSuggestionView(leaf, this)
         );
 
         this.inlineSuggest = new InlineLinkSuggest(this.app, this);
@@ -71,20 +77,16 @@ export default class SmartVaultPlugin extends Plugin {
         this.handwrittenWatcher = new HandwrittenNoteWatcher(this);
         this.handwrittenWatcher.register();
 
-        // Initialize Handwritten Note Watcher
-        this.handwrittenWatcher = new HandwrittenNoteWatcher(this);
-        this.handwrittenWatcher.register();
-
         this.registerEditorExtension(inlineSuggestionExtension(this.app, this));
 
-        this.addRibbonIcon('brain', 'Smart Vault Suggestions', () => {
-            this.activateSuggestionView();
+        this.addRibbonIcon('brain', 'Smart vault suggestions', () => {
+            void this.activateSuggestionView();
         });
 
         this.addCommand({
             id: 'scan-vault',
             name: 'Scan vault for embeddings',
-            callback: () => this.scanVault()
+            callback: () => { void this.scanVault(); }
         });
 
 
@@ -104,7 +106,7 @@ export default class SmartVaultPlugin extends Plugin {
             id: 'suggest-links-current',
             name: 'Suggest links for current note',
             editorCallback: (editor: Editor, view: MarkdownView) => {
-                this.suggestLinksForCurrentNote(view);
+                void this.suggestLinksForCurrentNote(view);
             }
         });
 
@@ -112,28 +114,28 @@ export default class SmartVaultPlugin extends Plugin {
             id: 'refresh-current-document',
             name: 'Refresh current document embedding',
             editorCallback: (editor: Editor, view: MarkdownView) => {
-                this.refreshCurrentDocument(view);
+                void this.refreshCurrentDocument(view);
             }
         });
 
         this.addCommand({
             id: 'toggle-suggestion-panel',
             name: 'Toggle suggestion panel',
-            callback: () => this.activateSuggestionView()
+            callback: () => { void this.activateSuggestionView(); }
         });
 
 
 
         this.addCommand({
             id: 'generate-moc',
-            name: 'Generate Map of Content (MOC)',
-            callback: () => this.openGenerateMOCModal()
+            name: 'Generate map of content (MOC)',
+            callback: () => { void this.openGenerateMOCModal(); }
         });
 
         this.addCommand({
             id: 'extract-diagrams',
-            name: 'Extract Diagrams (Vision)',
-            callback: () => this.extractDiagramFromActiveNote()
+            name: 'Extract diagrams (Vision)',
+            callback: () => { void this.extractDiagramFromActiveNote(); }
         });
 
         this.addSettingTab(new SmartVaultSettingTab(this.app, this));
@@ -149,7 +151,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (selection) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Suggest Grammar Corrections')
+                            .setTitle('Smart Vault: Suggest grammar corrections')
                             .setIcon('spell-check')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -173,7 +175,7 @@ export default class SmartVaultPlugin extends Plugin {
                             .onClick(async () => {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
-                                    this.suggestionView.openChatWithFiles([file]);
+                                    void this.suggestionView.openChatWithFiles([file]);
                                 }
                             });
                     });
@@ -185,7 +187,7 @@ export default class SmartVaultPlugin extends Plugin {
                             .onClick(async () => {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
-                                    this.suggestionView.openChatWithAction([file], "Summarize this note.");
+                                    void this.suggestionView.openChatWithAction([file], "Summarize this note.");
                                 }
                             });
                     });
@@ -197,7 +199,7 @@ export default class SmartVaultPlugin extends Plugin {
                             .onClick(async () => {
                                 await this.activateSuggestionView();
                                 if (this.suggestionView) {
-                                    this.suggestionView.openChatWithAction([file], "Generate a structured outline of this note.");
+                                    void this.suggestionView.openChatWithAction([file], "Generate a structured outline of this note.");
                                 }
                             });
                     });
@@ -221,7 +223,7 @@ export default class SmartVaultPlugin extends Plugin {
         // Context Menu: "Chat with selected notes" (Multi-file)
         this.registerEvent(
             this.app.workspace.on('files-menu', (menu, files) => {
-                const selectedFiles = files.filter(f => f instanceof TFile) as TFile[];
+                const selectedFiles = files.filter(f => f instanceof TFile);
                 if (selectedFiles.length > 0) {
                     menu.addItem((item) => {
                         item
@@ -245,9 +247,9 @@ export default class SmartVaultPlugin extends Plugin {
             this.app.workspace.on('file-open', (file) => {
                 if (file instanceof TFile && file.extension === 'md') {
                     if (this.settings.debugMode) {
-                        console.log('[DEBUG] file-open event:', file.path);
+                        console.debug('[DEBUG] file-open event:', file.path);
                     }
-                    this.onFileOpen(file);
+                    void this.onFileOpen(file);
                 }
             })
         );
@@ -259,9 +261,9 @@ export default class SmartVaultPlugin extends Plugin {
                     const file = leaf.view.file;
                     if (file) {
                         if (this.settings.debugMode) {
-                            console.log('[DEBUG] active-leaf-change event:', file.path);
+                            console.debug('[DEBUG] active-leaf-change event:', file.path);
                         }
-                        this.onFileOpen(file);
+                        void this.onFileOpen(file);
                     }
                 }
             })
@@ -272,7 +274,7 @@ export default class SmartVaultPlugin extends Plugin {
             this.app.vault.on('modify', async (file) => {
                 if (file instanceof TFile && file.extension === 'md') {
                     if (this.settings.debugMode) {
-                        console.log(`[DEBUG] File modified: ${file.path}`);
+                        console.debug(`[DEBUG] File modified: ${file.path}`);
                     }
                     await this.onFileModified(file);
                 }
@@ -282,8 +284,9 @@ export default class SmartVaultPlugin extends Plugin {
         // Check if we have embeddings loaded and generate suggestions if needed
         const embeddingCount = this.smartVault.get_embedding_count();
         if (embeddingCount > 0) {
-            console.log(`Loaded ${embeddingCount} embeddings from disk`);
-
+            if (this.settings.debugMode) {
+                console.debug(`Loaded ${embeddingCount} embeddings from disk`);
+            }
             // Load cached suggestions first for instant availability
             setTimeout(async () => {
                 // Ensure the suggestion view is activated so we can load suggestions
@@ -311,10 +314,10 @@ export default class SmartVaultPlugin extends Plugin {
                 let needsLLMRegeneration = false;
                 if (this.settings.useLLMReranking && this.suggestionView) {
                     for (const [path, suggestions] of this.suggestionView.allDocumentSuggestions) {
-                        if (suggestions.length > 0 && !suggestions.some((s: any) => s.llm_score !== undefined)) {
+                        if (suggestions.length > 0 && !suggestions.some((s: import('../ui/LinkSuggestionView').LinkSuggestion) => s.llm_score !== undefined)) {
                             needsLLMRegeneration = true;
                             if (this.settings.debugMode) {
-                                console.log(`[DEBUG] File ${path} has ${suggestions.length} suggestions but no LLM scores`);
+                                console.debug(`[DEBUG] File ${path} has ${suggestions.length} suggestions but no LLM scores`);
                             }
                             break;  // Found at least one, no need to check more
                         }
@@ -324,19 +327,24 @@ export default class SmartVaultPlugin extends Plugin {
                 // Regenerate if cache is empty OR incomplete OR missing LLM scores
                 if (cachedCount === 0 || cachedCount < embeddingCount || needsLLMRegeneration) {
                     if (needsLLMRegeneration) {
-                        console.log(`Regenerating suggestions to add LLM rankings...`);
+                        if (this.settings.debugMode) {
+                            console.debug(`Regenerating suggestions to add LLM rankings...`);
+                            console.debug(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                        }
                     } else {
-                        console.log(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                        if (this.settings.debugMode) {
+                            console.debug(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                        }
                     }
                     await this.generateAllSuggestions();
 
                     // Save the generated suggestions
                     if (this.settings.debugMode) {
-                        console.log(`[DEBUG] About to save suggestions. allDocumentSuggestions.size=${this.suggestionView?.allDocumentSuggestions.size}`);
+                        console.debug(`[DEBUG] About to save suggestions. allDocumentSuggestions.size=${this.suggestionView?.allDocumentSuggestions.size}`);
                     }
                     await this.saveSuggestions();
                     if (this.settings.debugMode) {
-                        console.log(`[DEBUG] Finished saving suggestions`);
+                        console.debug(`[DEBUG] Finished saving suggestions`);
                     }
                 }
 
@@ -350,29 +358,25 @@ export default class SmartVaultPlugin extends Plugin {
             }, CONSTANTS.STARTUP_DELAY_MS);
         } else {
             // No embeddings found - auto-scan vault
-            console.log('No embeddings found, starting initial vault scan...');
+            if (this.settings.debugMode) {
+                console.debug('No embeddings found, starting initial vault scan...');
+            }
             setTimeout(async () => {
                 this.cacheInitialized = true;  // Enable file-open events after scan starts
                 await this.scanVault();
             }, CONSTANTS.INITIAL_SCAN_DELAY_MS); // Wait 2 seconds to let Obsidian finish loading
         }
 
-        console.log('Smart Vault plugin loaded successfully');
+        if (this.settings.debugMode) {
+            console.debug('Smart Vault plugin loaded successfully');
+        }
     }
 
     async initializeWasm() {
         const wasmModule = await import('../../pkg/obsidian_smart_vault.js');
 
-        // Get the plugin directory path
-        const adapter = this.app.vault.adapter;
-        // @ts-ignore
-        const basePath = adapter.getBasePath ? adapter.getBasePath() : '';
-        const pluginDir = `${basePath}/.obsidian/plugins/smart-vault-organizer`;
-        const wasmPath = `${pluginDir}/pkg/obsidian_smart_vault_bg.wasm`;
-
-        // Load WASM file (use object parameter to avoid deprecation warning)
-        const wasmBytes = await adapter.readBinary(`${this.manifest.dir}/pkg/obsidian_smart_vault_bg.wasm`);
-        await wasmModule.default({ module_or_path: wasmBytes });
+        // Initialize WASM module using the bundled binary
+        await wasmModule.default({ module_or_path: wasmBinary });
         wasmModule.init();
 
         this.wasmModule = wasmModule;
@@ -429,7 +433,9 @@ export default class SmartVaultPlugin extends Plugin {
         // Load saved keywords if they exist
         await this.cacheManager.loadKeywords();
 
-        console.log('WASM module initialized');
+        if (this.settings.debugMode) {
+            console.debug('WASM module initialized');
+        }
     }
 
     getEmbeddingsPath(): string {
@@ -470,6 +476,7 @@ export default class SmartVaultPlugin extends Plugin {
 
     async loadKeywords() {
         // Delegated to CacheManager
+        await Promise.resolve();
     }
 
     async saveKeywords() {
@@ -478,17 +485,18 @@ export default class SmartVaultPlugin extends Plugin {
 
     async loadInsertionCache() {
         // Delegated to CacheManager
+        await Promise.resolve();
     }
 
     async saveInsertionCache() {
         return this.cacheManager!.saveInsertionCache();
     }
 
-    getCachedInsertion(filePath: string, linkTitle: string): any | null {
+    getCachedInsertion(filePath: string, linkTitle: string): import('./cache/types').InsertionResult | null {
         return this.cacheManager!.getCachedInsertion(filePath, linkTitle);
     }
 
-    cacheInsertion(filePath: string, linkTitle: string, result: any) {
+    cacheInsertion(filePath: string, linkTitle: string, result: import('./cache/types').InsertionResult) {
         return this.cacheManager!.cacheInsertion(filePath, linkTitle, result);
     }
 
@@ -526,7 +534,9 @@ export default class SmartVaultPlugin extends Plugin {
                 this.suggestionView.render();
             }
 
-            console.log('Cleared all embeddings');
+            if (this.settings.debugMode) {
+                console.debug('Cleared all embeddings');
+            }
         } catch (error) {
             console.error('Failed to clear embeddings:', error);
             throw error;
@@ -571,6 +581,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         const timer = setTimeout(async () => {
+            await Promise.resolve(); // satisfy async
             this.debounceTimers.delete(file.path);
 
             if (this.settings.debugMode) {
@@ -596,7 +607,7 @@ export default class SmartVaultPlugin extends Plugin {
         this.debounceTimers.set(file.path, timer);
     }
 
-    async invalidateFileCaches(file: TFile) {
+    invalidateFileCaches(file: TFile) {
         if (this.settings.debugMode) {
             console.log(`[DEBUG] Invalidating caches for: ${file.path}`);
         }
@@ -633,7 +644,7 @@ export default class SmartVaultPlugin extends Plugin {
 
             // Regenerate embedding
             const embedding = await this.rerankerService!.generateEmbedding(truncatedContent);
-            this.smartVault.set_embedding(file.path, embedding);
+            this.smartVault.set_embedding(file.path, new Float32Array(embedding));
             this.cacheManager!.markEmbeddingProcessed(file.path, file.stat.mtime);
 
             // Extract keywords if enabled
@@ -836,7 +847,7 @@ export default class SmartVaultPlugin extends Plugin {
      * Generate link suggestions for a file.
      * Wrapper for FileProcessor.getSuggestionsForFile
      */
-    async getSuggestionsForFile(file: TFile, content: string, existingEmbedding?: number[], skipLLM: boolean = false, forceLLMRefresh: boolean = false): Promise<any[]> {
+    async getSuggestionsForFile(file: TFile, content: string, existingEmbedding?: number[], skipLLM: boolean = false, forceLLMRefresh: boolean = false): Promise<import('../ui/LinkSuggestionView').LinkSuggestion[]> {
         if (!this.fileProcessor) return [];
 
         let embedding = existingEmbedding;
@@ -879,7 +890,7 @@ export default class SmartVaultPlugin extends Plugin {
         const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_SUGGESTIONS);
 
         if (existing.length) {
-            this.app.workspace.revealLeaf(existing[0]);
+            void this.app.workspace.revealLeaf(existing[0]);
             return;
         }
 
@@ -888,7 +899,7 @@ export default class SmartVaultPlugin extends Plugin {
             active: true,
         });
 
-        this.app.workspace.revealLeaf(
+        void this.app.workspace.revealLeaf(
             this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_SUGGESTIONS)[0]
         );
     }
@@ -903,17 +914,21 @@ export default class SmartVaultPlugin extends Plugin {
 
         const intervalMs = this.settings.scanInterval * 60 * 1000;
         this.scanIntervalId = window.setInterval(() => {
-            this.scanVault();
+            void this.scanVault();
         }, intervalMs);
 
-        console.log(`Auto-scan started: every ${this.settings.scanInterval} minutes`);
+        if (this.settings.debugMode) {
+            console.debug(`Auto-scan started: every ${this.settings.scanInterval} minutes`);
+        }
     }
 
     stopAutoScan() {
         if (this.scanIntervalId !== null) {
             window.clearInterval(this.scanIntervalId);
             this.scanIntervalId = null;
-            console.log('Auto-scan stopped');
+            if (this.settings.debugMode) {
+                console.debug('Auto-scan stopped');
+            }
         }
     }
 
@@ -931,13 +946,16 @@ export default class SmartVaultPlugin extends Plugin {
             try {
                 const embeddingsJson = this.smartVault.serialize_embeddings();
                 const embeddingsPath = this.cacheManager.getEmbeddingsPath();
-                this.app.vault.adapter.write(embeddingsPath, embeddingsJson);
+                this.app.vault.adapter.write(embeddingsPath, embeddingsJson)
+                    .catch(e => console.error('Failed to write embeddings on unload:', e));
             } catch (error) {
                 console.error('Failed to save embeddings on unload:', error);
             }
         }
 
-        console.log('Smart Vault plugin unloaded');
+        if (this.settings.debugMode) {
+            console.debug('Smart Vault plugin unloaded');
+        }
     }
 
     async loadSettings() {
@@ -946,7 +964,9 @@ export default class SmartVaultPlugin extends Plugin {
         // Migration: bump old 15s timeout to new 30s default
         // This helps users who had the old default and are experiencing timeouts
         if (this.settings.llmTimeout === 15000) {
-            console.log('[Smart Vault] Migrating LLM timeout from 15s to 30s default');
+            if (this.settings.debugMode) {
+                console.debug('[Smart Vault] Migrating LLM timeout from 15s to 30s default');
+            }
             this.settings.llmTimeout = 30000;
             await this.saveSettings();
         }
@@ -960,9 +980,9 @@ export default class SmartVaultPlugin extends Plugin {
     // MOC Generator (Phase 3)
     // ============================================================
 
-    async openGenerateMOCModal() {
+    openGenerateMOCModal() {
         const activeFile = this.app.workspace.getActiveFile();
-        let defaultTopic = activeFile ? activeFile.basename : '';
+        const defaultTopic = activeFile ? activeFile.basename : '';
 
         new GenerateMOCModal(this.app, defaultTopic, async (topic) => {
             await this.generateMOC(topic);
@@ -992,13 +1012,9 @@ export default class SmartVaultPlugin extends Plugin {
             // Checking wasmModule usage... RerankerService calls `generate_embedding_ollama`.
 
             // 2. Find relevant notes (Top 50)
-            const relevant = this.wasmModule.find_similar_notes_of_vec(topicVec, CONSTANTS.MOC_TOP_K);
-            // 2. Find relevant notes (Top 50) using vector similarity
-
-
-            const relevantSuggestions = this.wasmModule.suggest_links_for_text(
+            const relevantSuggestions = this.smartVault.suggest_links_for_text(
                 topic, // 'text' content - not relevant for retrieval, just used for title matching logic
-                topicVec,
+                new Float32Array(topicVec),
                 CONSTANTS.MOC_SIMILARITY_THRESHOLD, // threshold
                 "", // current_file_path (empty to avoid exclusion)
                 CONSTANTS.MOC_TOP_K // top_k
@@ -1030,12 +1046,12 @@ export default class SmartVaultPlugin extends Plugin {
             const targetFile = await this.app.vault.create(filename, mocContent);
 
             // Open the new file
-            this.app.workspace.getLeaf().openFile(targetFile);
+            void this.app.workspace.getLeaf().openFile(targetFile);
             new Notice(`MOC created: ${filename}`);
 
-        } catch (error: any) {
-            console.error("MOC Generation failed:", error);
-            new Notice(`MOC Generation failed: ${error.message}`);
+        } catch (error) {
+            console.error("MOC generation failed:", error);
+            new Notice(`MOC generation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
@@ -1093,7 +1109,9 @@ export default class SmartVaultPlugin extends Plugin {
                 this.settings.debugMode
             );
 
-            console.log('[DEBUG] object detection result:', resultJson);
+            if (this.settings.debugMode) {
+                console.debug('[DEBUG] object detection result:', resultJson);
+            }
 
             // Clean response (sometimes has markdown blocks)
             const cleanedJson = resultJson.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -1160,7 +1178,7 @@ export default class SmartVaultPlugin extends Plugin {
                 // Save file
                 const timestamp = Date.now();
                 const newFilename = `Diagram_${timestamp}.png`;
-                const newFile = await this.app.vault.createBinary(newFilename, croppedBuffer);
+                const _newFile = await this.app.vault.createBinary(newFilename, croppedBuffer);
 
                 // Append to note
                 const editor = view.editor;
@@ -1170,9 +1188,9 @@ export default class SmartVaultPlugin extends Plugin {
 
             }, 'image/png');
 
-        } catch (error: any) {
-            console.error(error);
-            new Notice(`Failed to extract diagram: ${error.message}`);
+        } catch (error) {
+            console.error('Failed to extract diagram:', error);
+            new Notice(`Failed to extract diagram: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
@@ -1200,12 +1218,15 @@ class GenerateMOCModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl('h2', { text: 'Generate Map of Content' });
+        contentEl.createEl('h2', { text: 'Generate map of content' });
 
         const div = contentEl.createDiv({ cls: 'setting-item-control' });
-        const input = div.createEl('input', { type: 'text', value: this.topic });
-        input.style.width = '100%';
-        input.placeholder = 'Enter topic (e.g. Fluid Dynamics)';
+        const input = div.createEl('input', {
+            type: 'text',
+            value: this.topic,
+            cls: 'smart-vault-full-width'
+        });
+        input.placeholder = 'Enter topic (e.g. Fluid dynamics)';
         input.addEventListener('input', (e) => {
             this.topic = (e.target as HTMLInputElement).value;
         });
@@ -1213,7 +1234,7 @@ class GenerateMOCModal extends Modal {
         // Focus input
         setTimeout(() => input.focus(), 50);
 
-        const btnDiv = contentEl.createDiv({ cls: 'modal-button-container', attr: { style: 'margin-top: 20px;' } });
+        const btnDiv = contentEl.createDiv({ cls: 'modal-button-container smart-vault-margin-top-20' });
         const btn = btnDiv.createEl('button', { text: 'Generate', cls: 'mod-cta' });
         btn.addEventListener('click', () => {
             this.close();
