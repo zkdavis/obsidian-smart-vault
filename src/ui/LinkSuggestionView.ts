@@ -63,7 +63,7 @@ export class LinkSuggestionView extends ItemView {
     }
 
     getDisplayText(): string {
-        return 'Link Suggestions';
+        return 'Link suggestions';
     }
 
     getIcon(): string {
@@ -220,7 +220,7 @@ export class LinkSuggestionView extends ItemView {
         // Better to re-instantiate or reuse? Reusing is better for state.
         if (this.tabs.size === 0) {
             this.tabs.set('suggestions', new SuggestionTab(this.app, this.plugin, this.tabContentContainer, this));
-            this.tabs.set('chat', new ChatTab(this.app, this.plugin, this.tabContentContainer));
+            this.tabs.set('chat', new ChatTab(this.app, this.plugin, this.tabContentContainer, this));
             this.tabs.set('formatting', new FormattingTab(this.app, this.plugin, this.tabContentContainer));
             this.tabs.set('organization', new OrganizationTab(this.app, this.plugin, this.tabContentContainer));
         } else {
@@ -258,7 +258,7 @@ export class LinkSuggestionView extends ItemView {
             chatTab.setContextFiles(files);
             // Wait slightly for UI to settle?
             setTimeout(() => {
-                chatTab.runQuery(actionPrompt);
+                void chatTab.runQuery(actionPrompt);
             }, 100);
         }
     }
@@ -287,7 +287,7 @@ export class LinkSuggestionView extends ItemView {
             cls: 'suggestion-button-secondary suggestion-mini-btn',
             attr: { title: 'View ignored suggestions' }
         });
-        viewIgnoredButton.onclick = async () => {
+        viewIgnoredButton.onclick = () => {
             this.showIgnoredSuggestionsModal();
         };
 
@@ -330,7 +330,7 @@ export class LinkSuggestionView extends ItemView {
             refreshButton.onclick = () => {
                 void (async () => {
                     if (this.plugin.settings.debugMode) {
-                        console.log('[DEBUG] Refresh button clicked!');
+                        console.debug('[DEBUG] Refresh button clicked!');
                     }
                     refreshButton.disabled = true;
                     refreshButton.addClass('spinning');
@@ -407,27 +407,27 @@ export class LinkSuggestionView extends ItemView {
                     retryBtn.textContent = 'Retrying...';
                     try {
                         if (this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] Retry button clicked for: ${this.currentFile!.path}`);
+                            console.debug(`[DEBUG] Retry button clicked for: ${this.currentFile!.path}`);
                         }
                         // Clear the failure and suggestion cache to force regeneration
                         this.llmFailedDocuments.delete(this.currentFile!.path);
                         this.allDocumentSuggestions.delete(this.currentFile!.path);
                         if (this.plugin.settings.debugMode) {
-                            console.log(`[DEBUG] Cleared failure tracking and suggestion cache for: ${this.currentFile!.path}`);
+                            console.debug(`[DEBUG] Cleared failure tracking and suggestion cache for: ${this.currentFile!.path}`);
                         }
 
                         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
                         if (view && view.file) {
                             if (this.plugin.settings.debugMode) {
-                                console.log(`[DEBUG] Found active view, calling refreshCurrentDocument...`);
+                                console.debug(`[DEBUG] Found active view, calling refreshCurrentDocument...`);
                             }
                             await this.plugin.refreshCurrentDocument(view);
                             if (this.plugin.settings.debugMode) {
-                                console.log(`[DEBUG] refreshCurrentDocument completed`);
+                                console.debug(`[DEBUG] refreshCurrentDocument completed`);
                             }
                         } else {
                             if (this.plugin.settings.debugMode) {
-                                console.log(`[DEBUG] No active markdown view found!`);
+                                console.debug(`[DEBUG] No active markdown view found!`);
                             }
                         }
                     } catch (error) {
@@ -449,7 +449,7 @@ export class LinkSuggestionView extends ItemView {
             if (embeddingCount === 0) {
                 emptyDiv.createEl('p', { text: 'Vault has not been scanned yet.' });
                 const scanButton = emptyDiv.createEl('button', {
-                    text: 'Scan Vault Now',
+                    text: 'Scan vault now',
                     cls: 'suggestion-button mod-cta'
                 });
                 scanButton.onclick = () => {
@@ -517,7 +517,7 @@ export class LinkSuggestionView extends ItemView {
 
         if (this.allDocumentSuggestions.size > 0) {
             const otherSection = container.createDiv({ cls: 'suggestion-section' });
-            otherSection.createEl('h5', { text: 'Other Documents with Suggestions' });
+            otherSection.createEl('h5', { text: 'Other documents with suggestions' });
 
             const otherList = otherSection.createEl('div', { cls: 'smart-vault-other-docs' });
 
@@ -541,7 +541,7 @@ export class LinkSuggestionView extends ItemView {
 
                 docItem.onclick = () => {
                     if (file instanceof TFile) {
-                        this.app.workspace.getLeaf().openFile(file);
+                        void this.app.workspace.getLeaf().openFile(file);
                     }
                 };
 
@@ -572,7 +572,7 @@ export class LinkSuggestionView extends ItemView {
             e.stopPropagation();
             const file = this.app.vault.getAbstractFileByPath(suggestion.path);
             if (file instanceof TFile) {
-                this.app.workspace.getLeaf().openFile(file);
+                void this.app.workspace.getLeaf().openFile(file);
             }
         };
 
@@ -682,7 +682,7 @@ export class LinkSuggestionView extends ItemView {
                     button.textContent = `"${previewPoint.originalText}" → "${previewPoint.linkText}"`;
                 } else {
                     // Show See Also preview
-                    button.textContent = '→ See Also';
+                    button.textContent = '→ See also';
                     isShowingPreview = true;
                 }
             }, 200); // Reduced to 200ms for faster feedback
@@ -713,7 +713,7 @@ export class LinkSuggestionView extends ItemView {
                     const cursor = editor.getCursor();
                     editor.setCursor(cursor);
                 }
-                button.textContent = 'Insert Link';
+                button.textContent = 'Insert link';
                 isShowingPreview = false;
             }
         };
@@ -1193,7 +1193,7 @@ export class LinkSuggestionView extends ItemView {
             // Add clear all button
             const footer = modal.contentEl.createEl('div', { cls: 'modal-button-container' });
             const clearAllBtn = footer.createEl('button', {
-                text: 'Clear All',
+                text: 'Clear all',
                 cls: 'mod-warning'
             });
             clearAllBtn.onclick = () => {

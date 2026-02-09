@@ -43,3 +43,7 @@ wasm-pack-*/
 # Development
 pro_cc.md
 .env
+task.md
+check_sentence_case.py
+sentence_todo.md
+venv/

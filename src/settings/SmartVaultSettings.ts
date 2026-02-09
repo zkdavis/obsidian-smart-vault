@@ -16,14 +16,10 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setHeading()
-            .setName('Smart Vault Organizer Settings');
+            .setName('Smart vault organizer settings');
 
         // Contribution Buttons
         const contributionContainer = containerEl.createDiv({ cls: 'smart-vault-contribution-container' });
-        contributionContainer.style.display = 'flex';
-        contributionContainer.style.gap = '10px';
-        contributionContainer.style.marginBottom = '20px';
-        contributionContainer.style.justifyContent = 'center';
 
         const createButton = (text: string, url: string, _icon?: string) => {
             contributionContainer.createEl('a', {
@@ -44,21 +40,21 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Debug');
 
         new Setting(containerEl)
-            .setName('Enable Debug Mode')
-            .setDesc('Show detailed debug logs in console (Ctrl+Shift+I)')
+            .setName('Enable debug mode')
+            .setDesc('Show detailed debug logs in console (ctrl+shift+i)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.debugMode)
                 .onChange((value) => {
                     void (async () => {
                         this.plugin.settings.debugMode = value;
                         await this.plugin.saveSettings();
-                        console.log(`[DEBUG] Debug mode ${value ? 'enabled' : 'disabled'}`);
+                        console.debug(`[DEBUG] Debug mode ${value ? 'enabled' : 'disabled'}`);
                     })();
                 }));
 
         new Setting(containerEl)
-            .setName('Debug Folder Filter')
-            .setDesc('Optional: Only scan files in this folder (e.g., "Wiki/"). Leave empty to scan all files.')
+            .setName('Debug folder filter')
+            .setDesc('Optional: only scan files in this folder (e.g., "wiki/"). Leave empty to scan all files.')
             .addText(text => text
                 .setPlaceholder('Wiki/')
                 .setValue(this.plugin.settings.debugFolderFilter)
@@ -72,7 +68,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Embedding settings');
 
         new Setting(containerEl)
-            .setName('Ollama Endpoint')
+            .setName('Ollama endpoint')
             .setDesc('URL of your Ollama server (e.g., http://localhost:11434)')
             .addText(text => text
                 .setPlaceholder('http://localhost:11434')
@@ -83,7 +79,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Chat Model')
+            .setName('Chat model')
             .setDesc('Ollama model to use for chat (e.g., llama3.1, mistral)')
             .addText(text => text
                 .setPlaceholder('llama3.1')
@@ -94,8 +90,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Embedding Model')
-            .setDesc('Ollama model for vector embeddings (e.g., bge-m3, nomic-embed-text). REQUIRES RE-SCAN if changed!')
+            .setName('Embedding model')
+            .setDesc('Ollama model for vector embeddings (e.g., bge-m3, nomic-embed-text). requires re-scan if changed!')
             .addText(text => text
                 .setPlaceholder('bge-m3')
                 .setValue(this.plugin.settings.embeddingModel)
@@ -105,7 +101,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Max Content Length')
+            .setName('Max content length')
             .setDesc('Maximum characters to send for embedding (nomic-embed-text: ~2000 safe, mxbai-embed: ~8000)')
             .addSlider(slider => slider
                 .setLimits(500, 8000, 500)
@@ -117,7 +113,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Similarity Threshold')
+            .setName('Similarity threshold')
             .setDesc('Minimum similarity score for link suggestions (0-1)')
             .addSlider(slider => slider
                 .setLimits(0, 1, 0.05)
@@ -129,7 +125,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Max Suggestions')
+            .setName('Max suggestions')
             .setDesc('Maximum number of suggestions to show')
             .addSlider(slider => slider
                 .setLimits(1, 20, 1)
@@ -141,7 +137,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Auto-scan Enabled')
+            .setName('Auto-scan enabled')
             .setDesc('Automatically scan vault at regular intervals')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.autoScanEnabled)
@@ -157,7 +153,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Scan Interval')
+            .setName('Scan interval')
             .setDesc('Minutes between automatic scans')
             .addSlider(slider => slider
                 .setLimits(5, 120, 5)
@@ -177,8 +173,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Chat RAG settings');
 
         new Setting(containerEl)
-            .setName('Vault Mode Threshold')
-            .setDesc('Minimum similarity (0-1) to include a note in "Vault" chats. Lower = more context (0.5 recommended).')
+            .setName('Vault mode threshold')
+            .setDesc('Minimum similarity (0-1) to include a note in "vault" chats. lower = more context (0.5 recommended).')
             .addSlider(slider => slider
                 .setLimits(0.1, 1.0, 0.05)
                 .setValue(this.plugin.settings.ragThresholdVault)
@@ -189,8 +185,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('General Mode Threshold')
-            .setDesc('Minimum similarity (0-1) to include a note in "General" chats. Higher = less noise (0.85 recommended).')
+            .setName('General mode threshold')
+            .setDesc('Minimum similarity (0-1) to include a note in "general" chats. higher = less noise (0.85 recommended).')
             .addSlider(slider => slider
                 .setLimits(0.1, 1.0, 0.05)
                 .setValue(this.plugin.settings.ragThresholdGeneral)
@@ -210,7 +206,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         });
 
         new Setting(containerEl)
-            .setName('Enable LLM Reranking')
+            .setName('Enable LLM reranking')
             .setDesc('Use an LLM to rerank suggestions with intelligent reasoning (slower but smarter)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.useLLMReranking)
@@ -220,8 +216,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Manual Rerank Only')
-            .setDesc('Only run LLM reranking when the "✨ Rerank with AI" button is clicked (skips automatic background reranking)')
+            .setName('Manual rerank only')
+            .setDesc('Only run LLM reranking when the "✨ rerank with AI" button is clicked (skips automatic background reranking)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.manualLLMRerank)
                 .onChange(async (value) => {
@@ -230,7 +226,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM Model')
+            .setName('LLM model')
             .setDesc('Ollama model for reranking (e.g., ministral-3:3b, qwen2.5:7b)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
@@ -245,8 +241,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Task-specific models');
 
         new Setting(containerEl)
-            .setName('Chat Model')
-            .setDesc('Model for "Smart Chat" (recommended: ministral-3:3b)')
+            .setName('Chat model')
+            .setDesc('Model for "Smart chat" (recommended: ministral-3:3b)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.chatModel)
@@ -256,8 +252,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Formatting Model')
-            .setDesc('Model for "Smart Formatting" (recommended: ministral-3:3b)')
+            .setName('Formatting model')
+            .setDesc('Model for "Smart formatting" (recommended: ministral-3:3b)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.formattingModel)
@@ -267,8 +263,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Organization Model')
-            .setDesc('Model for "Smart Organization" (ministral-3:3b works well)')
+            .setName('Organization model')
+            .setDesc('Model for "Smart organization" (ministral-3:3b works well)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.organizationModel)
@@ -279,7 +275,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
 
         new Setting(containerEl)
-            .setName('LLM Candidate Count')
+            .setName('LLM candidate count')
             .setDesc('How many top embedding results to send to LLM for reranking')
             .addSlider(slider => slider
                 .setLimits(1, 20, 1)
@@ -291,7 +287,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM Temperature')
+            .setName('LLM temperature')
             .setDesc('Creativity of LLM reasoning (0.0 = precise, 1.0 = creative)')
             .addSlider(slider => slider
                 .setLimits(0, 1, 0.1)
@@ -303,8 +299,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Enable Hover Previews')
-            .setDesc('Show live previews of suggestions on hover (for links, grammar, etc.). Default: On.')
+            .setName('Enable hover previews')
+            .setDesc('Show live previews of suggestions on hover (for links, grammar, etc.). default: on.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableHoverPreviews)
                 .onChange(async (value) => {
@@ -314,8 +310,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Chat Temperature')
-            .setDesc('Creativity for Chat (0.7+ recommended for natural conversation)')
+            .setName('Chat temperature')
+            .setDesc('Creativity for chat (0.7+ recommended for natural conversation)')
             .addSlider(slider => slider
                 .setLimits(0, 1, 0.1)
                 .setValue(this.plugin.settings.chatTemperature)
@@ -326,7 +322,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Enable Smart Insertion')
+            .setName('Enable Smart insertion')
             .setDesc('Use LLM to find the best place to insert links (experimental)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableSmartInsertion)
@@ -336,7 +332,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM Concurrency')
+            .setName('LLM concurrency')
             .setDesc('Number of files to process in parallel during vault scan (higher = faster but more CPU/memory)')
             .addSlider(slider => slider
                 .setLimits(1, 10, 1)
@@ -348,7 +344,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM Timeout (seconds)')
+            .setName('LLM timeout (seconds)')
             .setDesc('How long to wait for LLM response before timing out (increase if you have a slow model)')
             .addSlider(slider => slider
                 .setLimits(10, 120, 5)
@@ -360,7 +356,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Extract Keywords')
+            .setName('Extract keywords')
             .setDesc('Use LLM to extract keywords from documents for better cross-linking (slightly slower scan)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.useKeywordExtraction)
@@ -370,7 +366,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Enable Thinking Mode')
+            .setName('Enable thinking mode')
             .setDesc('Use chain-of-thought reasoning for qwen3/deepseek models (better quality, slower)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableThinkingMode)
@@ -390,8 +386,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
         new Setting(containerEl)
-            .setName('Vision Model')
-            .setDesc('Model for handwritten notes (OCR). Recommended: "ministral-3:3b" (Fast/Default), "ministral-3:8b" (Better), or "qwen3-vl:7b" (Best Math). Avoid "Reasoning" models like R1.')
+            .setName('Vision model')
+            .setDesc('Model for handwritten notes (OCR). recommended: "ministral-3:3b" (fast/default), "ministral-3:8b" (better), or "qwen3-vl:7b" (best math). avoid "reasoning" models like r1.')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.visionModel)
@@ -401,7 +397,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Handwritten Inbox')
+            .setName('Handwritten inbox')
             .setDesc('Folder to watch for images/PDFs (relative to vault root)')
             .addText(text => text
                 .setPlaceholder('Inbox/Handwritten')
@@ -412,8 +408,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Transcript Folder')
-            .setDesc('Where to save the transcribed Markdown notes')
+            .setName('Transcript folder')
+            .setDesc('Where to save the transcribed markdown notes')
             .addText(text => text
                 .setPlaceholder('Inbox')
                 .setValue(this.plugin.settings.transcriptFolder)
@@ -423,7 +419,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Attachments Folder')
+            .setName('Attachments folder')
             .setDesc('Where to move the original handwritten images/PDFs after processing')
             .addText(text => text
                 .setPlaceholder('Attachments/Handwritten')
@@ -438,8 +434,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Vault management');
 
         new Setting(containerEl)
-            .setName('Cache Directory')
-            .setDesc('Folder where cache files are stored (default: _smartvault). REQUIRES RESTART to take effect.')
+            .setName('Cache directory')
+            .setDesc('Folder where cache files are stored (default: _smartvault). requires restart to take effect.')
             .addText(text => text
                 .setPlaceholder('_smartvault')
                 .setValue(this.plugin.settings.cacheDirectory)
@@ -449,7 +445,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Manual Scan')
+            .setName('Manual scan')
             .setDesc('Scan vault now to generate embeddings for all notes')
             .addButton(button => button
                 .setButtonText('Scan vault now')
@@ -469,7 +465,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
 
         new Setting(containerEl)
-            .setName('Export Vector Cache')
+            .setName('Export vector cache')
             .setDesc('Export embeddings to JSON for backup or debugging (saves to "smart-vault-export.json" in root)')
             .addButton(button => button
                 .setButtonText('Export cache')
@@ -488,12 +484,12 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Import Vector Cache')
-            .setDesc('Restore embeddings from "smart-vault-export.json". WARNING: Overwrites current in-memory cache!')
+            .setName('Import vector cache')
+            .setDesc('Restore embeddings from "smart-vault-export.json". warning: overwrites current in-memory cache!')
             .addButton(button => button
                 .setButtonText('Import cache')
                 .setWarning()
-                .onClick(async () => {
+                .onClick(() => {
                     new ConfirmModal(
                         this.app,
                         'Import Cache',
@@ -518,7 +514,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Clear Embeddings')
+            .setName('Clear embeddings')
             .setDesc('Delete all cached embeddings and start fresh (requires re-scan)')
             .addButton(button => button
                 .setButtonText('Clear embeddings')
@@ -536,8 +532,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Clear Analysis Cache')
-            .setDesc('Clear cached results for Formatting and Organization analysis')
+            .setName('Clear analysis cache')
+            .setDesc('Clear cached results for formatting and organization analysis')
             .addButton(button => button
                 .setButtonText('Clear cache')
                 .setWarning()
@@ -549,7 +545,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Complete Rescan')
+            .setName('Complete rescan')
             .setDesc('Clear all caches (embeddings, suggestions, file modification times) and rescan the entire vault from scratch')
             .addButton(button => button
                 .setButtonText('Complete rescan')

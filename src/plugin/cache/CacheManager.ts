@@ -237,7 +237,7 @@ export class CacheManager {
         await this.migrateLegacyInsertionCache();
 
         // Save the migrated data
-        await this.saveCacheIndex();
+        this.saveCacheIndex();
 
         if (this.debugMode) {
             console.debug('[DEBUG] Legacy cache migration complete');
@@ -257,7 +257,7 @@ export class CacheManager {
             const parsed: { [key: string]: number } = JSON.parse(cacheJson);
 
             let count = 0;
-            for (const [key, _timestamp] of Object.entries(parsed)) {
+            for (const key of Object.keys(parsed)) {
                 const parts = key.split('|');
                 if (parts.length === 2) {
                     this.smartVault.ignore_suggestion(parts[0], parts[1]);
@@ -575,7 +575,7 @@ export class CacheManager {
                         }
 
                         // Also save the cache index
-                        await this.saveCacheIndex();
+                        this.saveCacheIndex();
                     } finally {
                         // Always reset saveInProgress even if an unexpected error occurs
                         this.saveInProgress = false;
@@ -849,7 +849,7 @@ export class CacheManager {
             if (resultJson) {
                 return JSON.parse(resultJson);
             }
-        } catch (e) {
+        } catch {
             // Silently fail, not a critical cache
         }
         return null;
@@ -860,7 +860,7 @@ export class CacheManager {
             const resultJson = JSON.stringify(result);
             this.smartVault.cache_insertion(filePath, linkTitle, resultJson);
             this.saveCacheIndex();
-        } catch (e) {
+        } catch {
             // Silently fail
         }
     }
@@ -884,7 +884,7 @@ export class CacheManager {
         // Ignored suggestions are now part of the unified cache index
         // Migration happens in loadCacheIndex()
         if (this.debugMode) {
-            console.log('[DEBUG] Ignored suggestions are now managed by Rust CacheIndex');
+            console.debug('[DEBUG] Ignored suggestions are now managed by Rust CacheIndex');
         }
         await Promise.resolve();
     }
@@ -932,14 +932,14 @@ export class CacheManager {
     // ============================================================
 
     async exportCache() {
-        const _exportPath = `${this.app.vault.adapter.getName()}/smart-vault-export.json`;
+
         // Since we cannot easily get absolute path of vault root depending on adapter,
         // we'll just write to the root of the vault with a fixed name.
         const targetPath = 'smart-vault-export.json';
 
         try {
             if (this.debugMode) {
-                console.log('[DEBUG] Exporting vector cache to JSON...');
+                console.debug('[DEBUG] Exporting vector cache to JSON...');
             }
             const jsonString = this.smartVault.serialize_embeddings();
 
@@ -955,7 +955,7 @@ export class CacheManager {
             // For now, just embeddings is the expensive part.
 
             if (this.debugMode) {
-                console.log(`[DEBUG] Successfully exported cache to ${targetPath}`);
+                console.debug(`[DEBUG] Successfully exported cache to ${targetPath}`);
             }
             return targetPath;
         } catch (error) {
@@ -975,23 +975,18 @@ export class CacheManager {
                 throw new Error(`Import file "${importPath}" not found in vault root.`);
             }
 
-            console.log(`[DEBUG] Importing vector cache from ${importPath}...`);
+            console.debug(`[DEBUG] Importing vector cache from ${importPath}...`);
             // @ts-ignore
             const jsonString = await adapter.read(importPath);
-
-            // Clear current cache first? Or merge?
-            // Safer to clear to ensure consistency, or maybe merge is better?
-            // "Offline Backup" usually implies restoring state. 
-            // Let's clear internal maps first to be safe, but WASM deserialize might replace.
 
             // Calls WASM deserialize (JSON format)
             this.smartVault.deserialize_embeddings(jsonString);
 
             // Immediately save to binary format for performance
-            await this.saveEmbeddings();
+            this.saveEmbeddings();
 
             const count = this.smartVault.get_embedding_count();
-            console.log(`[DEBUG] Successfully imported ${count} embeddings from ${importPath}`);
+            console.debug(`[DEBUG] Successfully imported ${count} embeddings from ${importPath}`);
             return count;
         } catch (error) {
             console.error('Error importing cache:', error);

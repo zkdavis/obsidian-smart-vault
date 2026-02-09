@@ -1,4 +1,4 @@
-import { App, TFile, setIcon, MarkdownView, MarkdownRenderer, Notice } from 'obsidian';
+import { App, TFile, setIcon, MarkdownView, MarkdownRenderer, Notice, Component } from 'obsidian';
 import { BaseTab } from './BaseTab';
 import SmartVaultPlugin from '../../plugin/SmartVaultPlugin';
 import { ConfirmModal } from '../../ui/ConfirmModal';
@@ -33,8 +33,11 @@ export class ChatTab extends BaseTab {
     private contextDetached: boolean = false;
     private shouldFocusInput: boolean = false;
 
-    constructor(app: App, plugin: SmartVaultPlugin, containerEl: HTMLElement) {
+    private component: Component;
+
+    constructor(app: App, plugin: SmartVaultPlugin, containerEl: HTMLElement, component: Component) {
         super(app, plugin, containerEl);
+        this.component = component;
     }
 
     async onOpen(): Promise<void> {
@@ -57,7 +60,7 @@ export class ChatTab extends BaseTab {
 
             // Load history
             if (this.plugin.cacheManager) {
-                this.plugin.cacheManager.loadChatHistory().then(history => {
+                void this.plugin.cacheManager.loadChatHistory().then(history => {
                     const loaded = history[file.path];
                     if (loaded) {
                         this.history = loaded;
@@ -81,7 +84,7 @@ export class ChatTab extends BaseTab {
 
         // Attempt to load history if single file context
         if (files.length === 1 && this.plugin.cacheManager) {
-            this.plugin.cacheManager.loadChatHistory().then(history => {
+            void this.plugin.cacheManager.loadChatHistory().then(history => {
                 const loaded = history[files[0].path];
                 if (loaded) {
                     this.history = loaded;
@@ -134,8 +137,8 @@ export class ChatTab extends BaseTab {
         const contextRow = toolBar.createDiv({ cls: 'smart-vault-context-row' });
 
         if (this.contextDetached) {
-            contextRow.createSpan({ text: '🚫 No Active Context', cls: 'smart-vault-context-status detached' });
-            const attachBtn = contextRow.createEl('button', { text: 'Attach Context', cls: 'smart-vault-mini-btn' });
+            contextRow.createSpan({ text: '🚫 No active context', cls: 'smart-vault-context-status detached' });
+            const attachBtn = contextRow.createEl('button', { text: 'Attach context', cls: 'smart-vault-mini-btn' });
             attachBtn.onclick = () => { this.contextDetached = false; this.render(); };
         }
         else if (this.activeContextFiles && this.activeContextFiles.length > 0) {
@@ -143,15 +146,15 @@ export class ChatTab extends BaseTab {
             header.createSpan({ text: `📌 ${this.activeContextFiles.length} Notes Selected`, cls: 'smart-vault-context-title' });
 
             // Detach Button
-            const detachBtn = contextRow.createEl('button', { text: '✕', title: 'Detach Context', cls: 'smart-vault-icon-btn smart-vault-detach-btn' });
+            const detachBtn = contextRow.createEl('button', { text: '✕', title: 'Detach context', cls: 'smart-vault-icon-btn smart-vault-detach-btn' });
             detachBtn.onclick = (e) => { e.stopPropagation(); this.contextDetached = true; this.activeContextFiles = null; this.render(); };
 
             // Toggle Details
             header.onclick = () => { this.showContextSources = !this.showContextSources; this.render(); };
         } else {
-            const _label = contextRow.createSpan({ text: this.currentFile ? `📄 ${this.currentFile.basename}` : 'No Active Note', cls: 'smart-vault-context-status' });
+            contextRow.createSpan({ text: this.currentFile ? `📄 ${this.currentFile.basename}` : 'No active note', cls: 'smart-vault-context-status' });
             if (this.currentFile) {
-                const detachBtn = contextRow.createEl('button', { text: '✕', title: 'Detach Context', cls: 'smart-vault-icon-btn smart-vault-detach-btn' });
+                const detachBtn = contextRow.createEl('button', { text: '✕', title: 'Detach context', cls: 'smart-vault-icon-btn smart-vault-detach-btn' });
                 detachBtn.onclick = () => { this.contextDetached = true; this.render(); };
             }
         }
@@ -162,7 +165,7 @@ export class ChatTab extends BaseTab {
 
         // --- Main Content Area ---
         if (this.showHistory) {
-            this.renderHistoryView(content);
+            void this.renderHistoryView(content);
         } else {
             this.renderMessages(content);
             this.renderInputArea(content);
@@ -174,7 +177,7 @@ export class ChatTab extends BaseTab {
         if (!this.plugin.cacheManager) return;
 
         const historyContainer = container.createDiv({ cls: 'smart-vault-history-view smart-vault-padding-10 smart-vault-overflow-auto smart-vault-flex-grow' });
-        historyContainer.createEl('h2', { text: 'Conversation History' });
+        historyContainer.createEl('h2', { text: 'Conversation history' });
 
         const history = await this.plugin.cacheManager.loadChatHistory();
         const files = Object.keys(history);
@@ -194,20 +197,22 @@ export class ChatTab extends BaseTab {
             infoDiv.createSpan({ text: ` (${history[filePath].length} msgs)`, cls: 'smart-vault-small smart-vault-muted' });
 
             // Delete Button
-            const deleteBtn = item.createEl('button', { text: '🗑️', title: 'Delete History', cls: 'smart-vault-mini-btn smart-vault-history-delete-btn' });
+            const deleteBtn = item.createEl('button', { text: '🗑️', title: 'Delete history', cls: 'smart-vault-mini-btn smart-vault-history-delete-btn' });
 
-            infoDiv.onclick = async () => {
-                const file = this.app.vault.getAbstractFileByPath(filePath);
-                if (file instanceof TFile) {
-                    await this.plugin.activateSuggestionView(); // Ensure view is active
-                    this.setContextFiles([file]);
-                    this.showHistory = false;
-                } else {
-                    new Notice(`File ${filePath} no longer exists.`);
-                }
+            infoDiv.onclick = () => {
+                void (async () => {
+                    const file = this.app.vault.getAbstractFileByPath(filePath);
+                    if (file instanceof TFile) {
+                        await this.plugin.activateSuggestionView(); // Ensure view is active
+                        this.setContextFiles([file]);
+                        this.showHistory = false;
+                    } else {
+                        new Notice(`File ${filePath} no longer exists.`);
+                    }
+                })();
             };
 
-            deleteBtn.onclick = async (e) => {
+            deleteBtn.onclick = (e) => {
                 e.stopPropagation();
                 new ConfirmModal(
                     this.app,
@@ -247,21 +252,21 @@ export class ChatTab extends BaseTab {
 
             const copyBtn = header.createEl('button', { cls: 'chat-copy-btn' });
             setIcon(copyBtn, 'copy');
-            copyBtn.onclick = () => { navigator.clipboard.writeText(msg.content); };
+            copyBtn.onclick = () => { void navigator.clipboard.writeText(msg.content); };
 
             if (msg.sources && msg.sources.length > 0) {
                 const sourcesDiv = msgDiv.createDiv({ cls: 'chat-sources' });
                 sourcesDiv.createSpan({ text: 'Sources: ', cls: 'source-label' });
                 msg.sources.forEach(sourcePath => {
                     const sourceLink = sourcesDiv.createEl('a', { text: sourcePath.split('/').pop(), cls: 'source-link' });
-                    sourceLink.onclick = () => { this.app.workspace.openLinkText(sourcePath, '', true); };
+                    sourceLink.onclick = () => { void this.app.workspace.openLinkText(sourcePath, '', true); };
                     sourcesDiv.createSpan({ text: ' ' });
                 });
             }
 
             if (msg.role === 'assistant') {
                 const contentDiv = msgDiv.createDiv({ cls: 'chat-content' });
-                MarkdownRenderer.render(this.app, msg.content, contentDiv, '', this.plugin);
+                void MarkdownRenderer.render(this.app, msg.content, contentDiv, '', this.component);
             } else {
                 msgDiv.createDiv({ text: msg.content, cls: 'chat-content' });
             }
@@ -293,11 +298,11 @@ export class ChatTab extends BaseTab {
             await this.processUserMessage(text);
         };
 
-        sendBtn.onclick = handleSend;
+        sendBtn.onclick = () => { void handleSend(); };
         input.onkeydown = (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                handleSend();
+                void handleSend();
             }
         };
         if (this.shouldFocusInput) {
@@ -588,7 +593,7 @@ export class ChatTab extends BaseTab {
             }
 
             try {
-                const _newFile = await this.app.vault.create(path, `# ${title}\n\nCreated by Smart Vault AI.\n`);
+                await this.app.vault.create(path, `# ${title}\n\nCreated by smart vault ai.\n`);
                 // Open the new file? Maybe not, just notify.
                 return `SYSTEM ACTION: Successfully created new note [[${title}]].`;
             } catch (e) {
@@ -649,7 +654,7 @@ export class ChatTab extends BaseTab {
 
         // 1. Recent Files Intent
         if (q.includes("recent") || q.includes("last updated") || q.includes("worked on") || q.includes("latest note")) {
-            context += await this.getRecentFiles(CONSTANTS.CHAT_RECENT_FILES_COUNT) + "\n\n";
+            context += this.getRecentFiles(CONSTANTS.CHAT_RECENT_FILES_COUNT) + "\n\n";
         }
 
         // 2. Daily Note Intent

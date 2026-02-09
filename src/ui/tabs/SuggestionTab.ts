@@ -18,6 +18,7 @@ export class SuggestionTab extends BaseTab {
 
     async onOpen(): Promise<void> {
         this.render();
+        await Promise.resolve();
     }
 
     async onClose(): Promise<void> {

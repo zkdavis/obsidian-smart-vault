@@ -1023,3 +1023,10 @@
 .smart-vault-accent {
     color: var(--interactive-accent);
 }
+
+.smart-vault-contribution-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+}

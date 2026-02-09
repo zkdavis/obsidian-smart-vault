@@ -150,7 +150,7 @@ export class FormattingTab extends BaseTab {
             );
 
             const timeoutMs = this.plugin.settings.llmTimeout || 30000;
-            const timeoutPromise = new Promise<any>((_, reject) => {
+            const timeoutPromise = new Promise<never>((_, reject) => {
                 setTimeout(() => reject(new Error('Formatting analysis timed out')), timeoutMs);
             });
 
@@ -197,7 +197,7 @@ export class FormattingTab extends BaseTab {
 
             if (result.existing_tags?.length) {
                 const existingDiv = tagContainer.createDiv();
-                existingDiv.createEl('h6', { text: 'Existing Tags', cls: 'smart-vault-margin-0 smart-vault-muted' });
+                existingDiv.createEl('h6', { text: 'Existing tags', cls: 'smart-vault-margin-0 smart-vault-muted' });
                 const btnContainer = existingDiv.createDiv({ cls: 'smart-vault-flex-row smart-vault-flex-wrap smart-vault-gap-6' });
 
                 result.existing_tags.forEach((tag: string) => {
@@ -208,7 +208,7 @@ export class FormattingTab extends BaseTab {
 
             if (result.new_tags?.length) {
                 const newDiv = tagContainer.createDiv();
-                newDiv.createEl('h6', { text: 'Suggested Tags', cls: 'smart-vault-margin-0 smart-vault-accent' });
+                newDiv.createEl('h6', { text: 'Suggested tags', cls: 'smart-vault-margin-0 smart-vault-accent' });
                 const btnContainer = newDiv.createDiv({ cls: 'smart-vault-flex-row smart-vault-flex-wrap smart-vault-gap-6' });
 
                 result.new_tags.forEach((tag: string) => {
@@ -224,7 +224,7 @@ export class FormattingTab extends BaseTab {
         // 2. Grammar Issues
         if (result.grammar_issues && result.grammar_issues.length > 0) {
             const section = container.createDiv({ cls: 'smart-vault-section' });
-            section.createEl('h4', { text: '💎 Grammar & Style' });
+            section.createEl('h4', { text: '💎 Grammar & style' });
 
             const list = section.createDiv({ cls: 'smart-vault-grammar-list' });
 
@@ -352,7 +352,7 @@ export class FormattingTab extends BaseTab {
             const header = flashcardSection.createDiv({ cls: 'smart-vault-section-header' });
             header.createEl('h4', { text: '🧠 Flashcards' });
 
-            const appendBtn = header.createEl('button', { text: 'Append All', cls: 'mod-cta' });
+            const appendBtn = header.createEl('button', { text: 'Append all', cls: 'mod-cta' });
 
             const cardList = flashcardSection.createEl('div', { cls: 'smart-vault-flashcards' });
 

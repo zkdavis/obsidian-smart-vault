@@ -128,13 +128,13 @@ export default class SmartVaultPlugin extends Plugin {
 
         this.addCommand({
             id: 'generate-moc',
-            name: 'Generate map of content (MOC)',
+            name: 'Generate map of content',
             callback: () => { void this.openGenerateMOCModal(); }
         });
 
         this.addCommand({
             id: 'extract-diagrams',
-            name: 'Extract diagrams (Vision)',
+            name: 'Extract diagrams',
             callback: () => { void this.extractDiagramFromActiveNote(); }
         });
 
@@ -151,7 +151,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (selection) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Suggest grammar corrections')
+                            .setTitle('Smart vault: suggest grammar corrections')
                             .setIcon('spell-check')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -170,7 +170,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (file instanceof TFile) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Chat with this note')
+                            .setTitle('Smart vault: chat with this note')
                             .setIcon('message-square')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -182,7 +182,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Summarize this note')
+                            .setTitle('Smart vault: summarize this note')
                             .setIcon('file-text')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -194,7 +194,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Generate Outline')
+                            .setTitle('Smart vault: generate outline')
                             .setIcon('list')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -205,7 +205,7 @@ export default class SmartVaultPlugin extends Plugin {
                     });
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: Transcribe PDF (Force)')
+                            .setTitle('Smart vault: transcribe pdf (force)')
                             .setIcon('file-audio')
                             .onClick(async () => {
                                 if (file.extension === 'pdf' && this.handwrittenWatcher) {
@@ -288,82 +288,86 @@ export default class SmartVaultPlugin extends Plugin {
                 console.debug(`Loaded ${embeddingCount} embeddings from disk`);
             }
             // Load cached suggestions first for instant availability
-            setTimeout(async () => {
-                // Ensure the suggestion view is activated so we can load suggestions
-                await this.activateSuggestionView();
+            setTimeout(() => {
+                void (async () => {
+                    // Ensure the suggestion view is activated so we can load suggestions
+                    await this.activateSuggestionView();
 
-                // Load file contents first so deduplication works
-                await this.loadFileContents();
+                    // Load file contents first so deduplication works
+                    await this.loadFileContents();
 
-                await this.loadSuggestions();
+                    await this.loadSuggestions();
 
-                // NOW mark cache as initialized - this allows file-open events to proceed
-                this.cacheInitialized = true;
-                if (this.settings.debugMode) {
-                    console.log('[DEBUG] Cache initialization complete - file-open events now enabled');
-                }
+                    // NOW mark cache as initialized - this allows file-open events to proceed
+                    this.cacheInitialized = true;
+                    if (this.settings.debugMode) {
+                        console.debug('[DEBUG] Cache initialization complete - file-open events now enabled');
+                    }
 
-                // Check if we need to generate any suggestions
-                const cachedCount = this.suggestionView?.allDocumentSuggestions.size || 0;
-                const embeddingCount = this.smartVault.get_embedding_count();
-                if (this.settings.debugMode) {
-                    console.log(`[DEBUG] Found ${cachedCount} cached suggestions for ${embeddingCount} embeddings`);
-                }
+                    // Check if we need to generate any suggestions
+                    const cachedCount = this.suggestionView?.allDocumentSuggestions.size || 0;
+                    const embeddingCount = this.smartVault.get_embedding_count();
+                    if (this.settings.debugMode) {
+                        console.debug(`[DEBUG] Found ${cachedCount} cached suggestions for ${embeddingCount} embeddings`);
+                    }
 
-                // Check if any cached suggestions are missing LLM scores (when LLM is enabled)
-                let needsLLMRegeneration = false;
-                if (this.settings.useLLMReranking && this.suggestionView) {
-                    for (const [path, suggestions] of this.suggestionView.allDocumentSuggestions) {
-                        if (suggestions.length > 0 && !suggestions.some((s: import('../ui/LinkSuggestionView').LinkSuggestion) => s.llm_score !== undefined)) {
-                            needsLLMRegeneration = true;
-                            if (this.settings.debugMode) {
-                                console.debug(`[DEBUG] File ${path} has ${suggestions.length} suggestions but no LLM scores`);
+                    // Check if any cached suggestions are missing LLM scores (when LLM is enabled)
+                    let needsLLMRegeneration = false;
+                    if (this.settings.useLLMReranking && this.suggestionView) {
+                        for (const [path, suggestions] of this.suggestionView.allDocumentSuggestions) {
+                            if (suggestions.length > 0 && !suggestions.some((s: import('../ui/LinkSuggestionView').LinkSuggestion) => s.llm_score !== undefined)) {
+                                needsLLMRegeneration = true;
+                                if (this.settings.debugMode) {
+                                    console.debug(`[DEBUG] File ${path} has ${suggestions.length} suggestions but no LLM scores`);
+                                }
+                                break;  // Found at least one, no need to check more
                             }
-                            break;  // Found at least one, no need to check more
                         }
                     }
-                }
 
-                // Regenerate if cache is empty OR incomplete OR missing LLM scores
-                if (cachedCount === 0 || cachedCount < embeddingCount || needsLLMRegeneration) {
-                    if (needsLLMRegeneration) {
+                    // Regenerate if cache is empty OR incomplete OR missing LLM scores
+                    if (cachedCount === 0 || cachedCount < embeddingCount || needsLLMRegeneration) {
+                        if (needsLLMRegeneration) {
+                            if (this.settings.debugMode) {
+                                console.debug(`Regenerating suggestions to add LLM rankings...`);
+                                console.debug(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                            }
+                        } else {
+                            if (this.settings.debugMode) {
+                                console.debug(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                            }
+                        }
+                        await this.generateAllSuggestions();
+
+                        // Save the generated suggestions
                         if (this.settings.debugMode) {
-                            console.debug(`Regenerating suggestions to add LLM rankings...`);
-                            console.debug(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                            console.debug(`[DEBUG] About to save suggestions. allDocumentSuggestions.size=${this.suggestionView?.allDocumentSuggestions.size}`);
                         }
-                    } else {
+                        await this.saveSuggestions();
                         if (this.settings.debugMode) {
-                            console.debug(`Generating suggestions for ${embeddingCount - cachedCount} files...`);
+                            console.debug(`[DEBUG] Finished saving suggestions`);
                         }
                     }
-                    await this.generateAllSuggestions();
 
-                    // Save the generated suggestions
-                    if (this.settings.debugMode) {
-                        console.debug(`[DEBUG] About to save suggestions. allDocumentSuggestions.size=${this.suggestionView?.allDocumentSuggestions.size}`);
+                    // Update view if file is open
+                    if (this.suggestionView) {
+                        const activeFile = this.app.workspace.getActiveFile();
+                        if (activeFile) {
+                            await this.suggestionView.updateForFile(activeFile);
+                        }
                     }
-                    await this.saveSuggestions();
-                    if (this.settings.debugMode) {
-                        console.debug(`[DEBUG] Finished saving suggestions`);
-                    }
-                }
-
-                // Update view if file is open
-                if (this.suggestionView) {
-                    const activeFile = this.app.workspace.getActiveFile();
-                    if (activeFile) {
-                        await this.suggestionView.updateForFile(activeFile);
-                    }
-                }
+                })();
             }, CONSTANTS.STARTUP_DELAY_MS);
         } else {
             // No embeddings found - auto-scan vault
             if (this.settings.debugMode) {
                 console.debug('No embeddings found, starting initial vault scan...');
             }
-            setTimeout(async () => {
-                this.cacheInitialized = true;  // Enable file-open events after scan starts
-                await this.scanVault();
+            setTimeout(() => {
+                void (async () => {
+                    this.cacheInitialized = true;  // Enable file-open events after scan starts
+                    await this.scanVault();
+                })();
             }, CONSTANTS.INITIAL_SCAN_DELAY_MS); // Wait 2 seconds to let Obsidian finish loading
         }
 
@@ -488,7 +492,7 @@ export default class SmartVaultPlugin extends Plugin {
         await Promise.resolve();
     }
 
-    async saveInsertionCache() {
+    saveInsertionCache() {
         return this.cacheManager!.saveInsertionCache();
     }
 
@@ -500,7 +504,7 @@ export default class SmartVaultPlugin extends Plugin {
         return this.cacheManager!.cacheInsertion(filePath, linkTitle, result);
     }
 
-    async saveEmbeddings() {
+    saveEmbeddings() {
         return this.cacheManager!.saveEmbeddings();
     }
 
@@ -547,7 +551,7 @@ export default class SmartVaultPlugin extends Plugin {
         // Don't process file-open events until cache is loaded to avoid overwriting good cache with empty data
         if (!this.cacheInitialized) {
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Ignoring early file-open for ${file.path} - cache not yet initialized`);
+                console.debug(`[DEBUG] Ignoring early file-open for ${file.path} - cache not yet initialized`);
             }
             return;
         }
@@ -556,7 +560,7 @@ export default class SmartVaultPlugin extends Plugin {
         const now = Date.now();
         if (this.lastOpenedFile === file.path && (now - this.lastOpenedTime) < CONSTANTS.FILE_OPEN_DEBOUNCE_MS) {
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Skipping duplicate file-open for ${file.path} (${now - this.lastOpenedTime}ms since last)`);
+                console.debug(`[DEBUG] Skipping duplicate file-open for ${file.path} (${now - this.lastOpenedTime}ms since last)`);
             }
             return;
         }
@@ -573,35 +577,37 @@ export default class SmartVaultPlugin extends Plugin {
      * Debounces rapidly firing events and checks if file content actually changed.
      * @param file The file that was modified
      */
-    async onFileModified(file: TFile) {
+    onFileModified(file: TFile) {
         // Debounce file modifications - wait 2 seconds after last edit
         const existingTimer = this.debounceTimers.get(file.path);
         if (existingTimer) {
             clearTimeout(existingTimer);
         }
 
-        const timer = setTimeout(async () => {
-            await Promise.resolve(); // satisfy async
-            this.debounceTimers.delete(file.path);
+        const timer = setTimeout(() => {
+            void (async () => {
+                await Promise.resolve(); // satisfy async
+                this.debounceTimers.delete(file.path);
 
-            if (this.settings.debugMode) {
-                console.log(`[DEBUG] Processing modification for: ${file.path}`);
-            }
-
-            // Check if file actually changed since we last processed it
-            const cachedMtime = this.fileModificationTimes.get(file.path);
-            if (cachedMtime === file.stat.mtime) {
                 if (this.settings.debugMode) {
-                    console.log(`[DEBUG] File mtime unchanged, skipping: ${file.path}`);
+                    console.debug(`[DEBUG] Processing modification for: ${file.path}`);
                 }
-                return;
-            }
 
-            // Invalidate caches for this file
-            await this.invalidateFileCaches(file);
+                // Check if file actually changed since we last processed it
+                const cachedMtime = this.fileModificationTimes.get(file.path);
+                if (cachedMtime === file.stat.mtime) {
+                    if (this.settings.debugMode) {
+                        console.debug(`[DEBUG] File mtime unchanged, skipping: ${file.path}`);
+                    }
+                    return;
+                }
 
-            // Regenerate embedding and suggestions for this file
-            await this.refreshSingleFile(file);
+                // Invalidate caches for this file
+                this.invalidateFileCaches(file);
+
+                // Regenerate embedding and suggestions for this file
+                await this.refreshSingleFile(file);
+            })();
         }, CONSTANTS.FILE_MODIFICATION_DEBOUNCE_MS);
 
         this.debounceTimers.set(file.path, timer);
@@ -609,7 +615,7 @@ export default class SmartVaultPlugin extends Plugin {
 
     invalidateFileCaches(file: TFile) {
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Invalidating caches for: ${file.path}`);
+            console.debug(`[DEBUG] Invalidating caches for: ${file.path}`);
         }
 
         // Invalidate all caches for this file via Rust CacheIndex
@@ -626,14 +632,14 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Invalidated caches for ${file.path}`);
+            console.debug(`[DEBUG] Invalidated caches for ${file.path}`);
         }
     }
 
     async refreshSingleFile(file: TFile) {
         try {
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Refreshing single file: ${file.path}`);
+                console.debug(`[DEBUG] Refreshing single file: ${file.path}`);
             }
 
             const content = await this.app.vault.read(file);
@@ -673,7 +679,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     this.smartVault.set_keywords(file.path, keywords);
                     this.cacheManager!.markKeywordProcessed(file.path, file.stat.mtime);
-                } catch (error) {
+                } catch {
                     // Fallback to title only
                     const titleKeyword = file.basename.replace(/\.md$/, '');
                     this.smartVault.set_keywords(file.path, [titleKeyword]);
@@ -703,7 +709,7 @@ export default class SmartVaultPlugin extends Plugin {
             await this.saveSuggestions();
 
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Successfully refreshed: ${file.path}`);
+                console.debug(`[DEBUG] Successfully refreshed: ${file.path}`);
             }
         } catch (error) {
             console.error(`Error refreshing file ${file.path}:`, error);
@@ -770,7 +776,7 @@ export default class SmartVaultPlugin extends Plugin {
             ];
 
             if (this.settings.debugMode) {
-                console.log('[DEBUG] Complete rescan: deleting cache files...');
+                console.debug('[DEBUG] Complete rescan: deleting cache files...');
             }
             for (const cachePath of cacheFiles) {
                 try {
@@ -779,11 +785,11 @@ export default class SmartVaultPlugin extends Plugin {
                     if (exists) {
                         await adapter.remove(cachePath);
                         if (this.settings.debugMode) {
-                            console.log(`[DEBUG] Deleted cache file: ${cachePath}`);
+                            console.debug(`[DEBUG] Deleted cache file: ${cachePath}`);
                         }
                     } else {
                         if (this.settings.debugMode) {
-                            console.log(`[DEBUG] Cache file not found (already deleted?): ${cachePath}`);
+                            console.debug(`[DEBUG] Cache file not found (already deleted?): ${cachePath}`);
                         }
                     }
                 } catch (error) {
@@ -791,7 +797,7 @@ export default class SmartVaultPlugin extends Plugin {
                 }
             }
             if (this.settings.debugMode) {
-                console.log('[DEBUG] Complete rescan: cache files deleted, starting scan...');
+                console.debug('[DEBUG] Complete rescan: cache files deleted, starting scan...');
             }
 
             notice.setMessage('All caches cleared. Starting complete scan...');
@@ -820,7 +826,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (this.settings.debugMode) {
-            console.log(`[DEBUG] Refresh button clicked for: ${file.path}`);
+            console.debug(`[DEBUG] Refresh button clicked for: ${file.path}`);
         }
 
         const notice = new Notice(`Refreshing ${file.basename}...`, 0);
@@ -828,7 +834,7 @@ export default class SmartVaultPlugin extends Plugin {
         try {
             const suggestions = await this.fileProcessor!.refreshDocument(
                 file,
-                () => this.saveEmbeddings()
+                async () => { this.saveEmbeddings(); }
             );
 
             notice.hide();
@@ -838,7 +844,7 @@ export default class SmartVaultPlugin extends Plugin {
             new Notice('Error refreshing document: ' + error);
             console.error('Refresh error:', error);
             if (this.settings.debugMode) {
-                console.log(`[DEBUG] Refresh failed with error:`, error);
+                console.debug(`[DEBUG] Refresh failed with error:`, error);
             }
         }
     }
@@ -984,8 +990,8 @@ export default class SmartVaultPlugin extends Plugin {
         const activeFile = this.app.workspace.getActiveFile();
         const defaultTopic = activeFile ? activeFile.basename : '';
 
-        new GenerateMOCModal(this.app, defaultTopic, async (topic) => {
-            await this.generateMOC(topic);
+        new GenerateMOCModal(this.app, defaultTopic, (topic) => {
+            void this.generateMOC(topic);
         }).open();
     }
 
@@ -1088,7 +1094,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (!['png', 'jpg', 'jpeg', 'webp'].includes(imageFile.extension.toLowerCase())) {
-            new Notice('Only PNG, JPG, and WEBP images are supported.');
+            new Notice('Only png, jpg, and webp images are supported.');
             return;
         }
 
@@ -1119,7 +1125,7 @@ export default class SmartVaultPlugin extends Plugin {
             let coords;
             try {
                 coords = JSON.parse(cleanedJson);
-            } catch (e) {
+            } catch {
                 // Try to find array regex
                 const arrMatch = cleanedJson.match(/\[\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\]/);
                 if (arrMatch) {
@@ -1168,24 +1174,25 @@ export default class SmartVaultPlugin extends Plugin {
             // Convert to blob/buffer
             // We need to write to vault. Obsidian writes ArrayBuffer.
             // Canvas -> Blob -> ArrayBuffer
-            canvas.toBlob(async (croppedBlob) => {
-                if (!croppedBlob) {
-                    new Notice("Failed to create cropped image blob");
-                    return;
-                }
-                const croppedBuffer = await croppedBlob.arrayBuffer();
+            canvas.toBlob((croppedBlob) => {
+                void (async () => {
+                    if (!croppedBlob) {
+                        new Notice("Failed to create cropped image blob");
+                        return;
+                    }
+                    const croppedBuffer = await croppedBlob.arrayBuffer();
 
-                // Save file
-                const timestamp = Date.now();
-                const newFilename = `Diagram_${timestamp}.png`;
-                const _newFile = await this.app.vault.createBinary(newFilename, croppedBuffer);
+                    // Save file
+                    const timestamp = Date.now();
+                    const newFilename = `Diagram_${timestamp}.png`;
+                    await this.app.vault.createBinary(newFilename, croppedBuffer);
 
-                // Append to note
-                const editor = view.editor;
-                editor.replaceSelection(`\n![[${newFilename}]]\n*Extracted Diagram*\n`);
+                    // Append to note
+                    const editor = view.editor;
+                    editor.replaceSelection(`\n![[${newFilename}]]\n*Extracted Diagram*\n`);
 
-                new Notice(`Saved diagram: ${newFilename}`);
-
+                    new Notice(`Saved diagram: ${newFilename}`);
+                })();
             }, 'image/png');
 
         } catch (error) {

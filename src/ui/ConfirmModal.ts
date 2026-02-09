@@ -39,13 +39,13 @@ export class ConfirmModal extends Modal {
 
         const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
         cancelButton.onclick = () => {
-            this.onConfirm(false);
+            void this.onConfirm(false);
             this.close();
         };
 
         const confirmButton = buttonContainer.createEl('button', { text: this.confirmText, cls: 'mod-warning' });
         confirmButton.onclick = () => {
-            this.onConfirm(true);
+            void this.onConfirm(true);
             this.close();
         };
     }

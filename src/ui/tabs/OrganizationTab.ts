@@ -236,7 +236,7 @@ export class OrganizationTab extends BaseTab {
             const card = item.createDiv({ cls: 'suggestion-card' });
 
             const header = card.createDiv({ cls: 'suggestion-header' });
-            header.createEl('span', { text: '📁 Suggested Folder:', cls: 'suggestion-label' });
+            header.createEl('span', { text: '📁 Suggested folder:', cls: 'suggestion-label' });
             header.createEl('code', { text: suggestion.folder, cls: 'suggestion-value' });
 
             const confidence = card.createDiv({ cls: 'suggestion-confidence' });
@@ -260,7 +260,7 @@ export class OrganizationTab extends BaseTab {
             }
 
             const actions = item.createDiv({ cls: 'suggestion-actions' });
-            const moveBtn = actions.createEl('button', { text: 'Move File', cls: 'mod-cta' });
+            const moveBtn = actions.createEl('button', { text: 'Move file', cls: 'mod-cta' });
 
             moveBtn.onclick = async () => {
                 await this.moveFile(file, suggestion.folder);
