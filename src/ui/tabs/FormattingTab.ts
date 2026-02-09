@@ -90,7 +90,7 @@ export class FormattingTab extends BaseTab {
         // State Machine Rendering
         if (this.isLoading) {
             outputArea.empty();
-            outputArea.createEl('div', { cls: 'smart-vault-loading', text: '🤖 Analyzing note quality... (switch tabs freely)' });
+            outputArea.createEl('div', { cls: 'smart-vault-loading', text: '🤖 analyzing note quality... (switch tabs freely)' });
         } else if (this.currentFile && this.lastAnalysis && this.lastAnalysisPath === this.currentFile.path) {
             this.renderResults(outputArea, this.lastAnalysis, this.currentFile);
         }
@@ -188,7 +188,7 @@ export class FormattingTab extends BaseTab {
         // 1. Tags
         if ((result.existing_tags && result.existing_tags.length > 0) || (result.new_tags && result.new_tags.length > 0)) {
             const tagSection = container.createDiv({ cls: 'smart-vault-section' });
-            tagSection.createEl('h4', { text: '🏷️ Tags' });
+            tagSection.createEl('h4', { text: '🏷️ tags' });
 
             // Scrollable Tags
             const tagContainer = tagSection.createDiv({
@@ -224,7 +224,7 @@ export class FormattingTab extends BaseTab {
         // 2. Grammar Issues
         if (result.grammar_issues && result.grammar_issues.length > 0) {
             const section = container.createDiv({ cls: 'smart-vault-section' });
-            section.createEl('h4', { text: '💎 Grammar & style' });
+            section.createEl('h4', { text: '💎 grammar & style' });
 
             const list = section.createDiv({ cls: 'smart-vault-grammar-list' });
 
@@ -261,7 +261,7 @@ export class FormattingTab extends BaseTab {
         // 3. Structure
         if (result.structure_suggestions?.length > 0) {
             const structureSection = container.createDiv({ cls: 'smart-vault-section' });
-            structureSection.createEl('h4', { text: '🏗️ Structure' });
+            structureSection.createEl('h4', { text: '🏗️ structure' });
             const ul = structureSection.createEl('ul', { cls: 'smart-vault-scroll-view' });
             result.structure_suggestions.forEach((s) => {
                 const li = ul.createEl('li', { cls: 'smart-vault-structure-item' });
@@ -350,7 +350,7 @@ export class FormattingTab extends BaseTab {
         if (result.flashcards?.length > 0) {
             const flashcardSection = container.createDiv({ cls: 'smart-vault-section' });
             const header = flashcardSection.createDiv({ cls: 'smart-vault-section-header' });
-            header.createEl('h4', { text: '🧠 Flashcards' });
+            header.createEl('h4', { text: '🧠 flashcards' });
 
             const appendBtn = header.createEl('button', { text: 'Append all', cls: 'mod-cta' });
 

@@ -398,7 +398,7 @@ export class LinkSuggestionView extends ItemView {
                 cls: 'warning-text'
             });
             const retryBtn = warningDiv.createEl('button', {
-                text: '↻ Retry',
+                text: '↻ retry',
                 cls: 'suggestion-button-secondary smart-vault-label-tag'
             });
             retryBtn.onclick = () => {
@@ -434,7 +434,7 @@ export class LinkSuggestionView extends ItemView {
                         console.error('Retry failed:', error);
                     } finally {
                         retryBtn.disabled = false;
-                        retryBtn.textContent = '↻ Retry';
+                        retryBtn.textContent = '↻ retry';
                     }
                 })();
             };
@@ -498,7 +498,7 @@ export class LinkSuggestionView extends ItemView {
                 if (hasLLMSuggestions && !shownEmbeddingDivider && suggestion.llm_score === undefined) {
                     shownEmbeddingDivider = true;
                     const divider = list.createEl('div', { cls: 'embedding-only-divider' });
-                    divider.createEl('span', { text: '📊 Embedding-only suggestions (not AI-ranked)' });
+                    divider.createEl('span', { text: '📊 embedding-only suggestions (not AI-ranked)' });
                 }
 
                 this.renderSuggestionItem(list, suggestion, this.currentFile!);
@@ -588,7 +588,7 @@ export class LinkSuggestionView extends ItemView {
         // Show LLM reasoning if available
         if (suggestion.llm_reason) {
             const reasonEl = item.createEl('div', { cls: 'suggestion-llm-reason' });
-            reasonEl.createEl('strong', { text: '💡 Why: ' });
+            reasonEl.createEl('strong', { text: '💡 why: ' });
             reasonEl.createSpan({ text: suggestion.llm_reason });
         }
 
@@ -599,7 +599,7 @@ export class LinkSuggestionView extends ItemView {
 
         const button = buttonContainer.createEl('button', { text: 'Insert link', cls: 'suggestion-button' });
 
-        const ignoreButton = buttonContainer.createEl('button', { text: '✕ Ignore', cls: 'suggestion-button-secondary' });
+        const ignoreButton = buttonContainer.createEl('button', { text: '✕ ignore', cls: 'suggestion-button-secondary' });
         ignoreButton.title = 'Hide this suggestion permanently';
         ignoreButton.onclick = (e) => {
             e.stopPropagation();
@@ -682,7 +682,7 @@ export class LinkSuggestionView extends ItemView {
                     button.textContent = `"${previewPoint.originalText}" → "${previewPoint.linkText}"`;
                 } else {
                     // Show See Also preview
-                    button.textContent = '→ See also';
+                    button.textContent = '→ see also';
                     isShowingPreview = true;
                 }
             }, 200); // Reduced to 200ms for faster feedback
@@ -1153,7 +1153,7 @@ export class LinkSuggestionView extends ItemView {
         const ignored = this.plugin.cacheManager!.getIgnoredSuggestions();
 
         const modal = new Modal(this.app);
-        modal.titleEl.setText(`Ignored Suggestions (${ignored.length})`);
+        modal.titleEl.setText(`Ignored suggestions (${ignored.length})`);
 
         if (ignored.length === 0) {
             modal.contentEl.createEl('p', { text: 'No ignored suggestions yet.' });
@@ -1176,7 +1176,7 @@ export class LinkSuggestionView extends ItemView {
                 item.createEl('div', { text: `Ignored: ${dateStr}`, cls: 'ignored-date' });
 
                 const unignoreBtn = item.createEl('button', {
-                    text: '↻ Restore',
+                    text: '↻ restore',
                     cls: 'suggestion-button-secondary'
                 });
                 unignoreBtn.onclick = () => {

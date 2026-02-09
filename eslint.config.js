@@ -1,0 +1,47 @@
+import tseslint from "typescript-eslint";
+import obsidianmd from "eslint-plugin-obsidianmd";
+import globals from "globals";
+
+export default tseslint.config(
+    {
+        files: ["**/*.ts"],
+        plugins: {
+            "@typescript-eslint": tseslint.plugin,
+            "obsidianmd": obsidianmd,
+        },
+        languageOptions: {
+            parser: tseslint.parser,
+            parserOptions: {
+                project: "./tsconfig.json",
+                tsconfigRootDir: import.meta.dirname,
+            },
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+            },
+        },
+        rules: {
+            // ONLY rules mentioned in the PR review:
+
+            // 1. Use sentence case for UI text
+            "obsidianmd/ui/sentence-case": [
+                "warn",
+                {
+                    brands: ["Smart Vault", "Ollama", "GitHub", "ministral", "llama", "qwen", "bge", "nomic", "WebP"],
+                    acronyms: ["PDF", "LLM", "RAG", "WASM", "CPU", "URL", "ID", "MOC", "OCR", "PNG", "JPG", "AI"],
+                    enforceCamelCaseLower: true,
+                    allowAutoFix: true,
+                },
+            ],
+
+            // 2. Unexpected await of a non-Promise value
+            "@typescript-eslint/await-thenable": "error",
+
+            // 3. Async arrow function has no 'await' expression
+            "@typescript-eslint/require-await": "error",
+
+            // 4. Promises must be awaited or handled
+            "@typescript-eslint/no-floating-promises": "error",
+        },
+    },
+);

@@ -16,7 +16,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setHeading()
-            .setName('Smart vault organizer settings');
+            .setName('Smart Vault organizer settings');
 
         // Contribution Buttons
         const contributionContainer = containerEl.createDiv({ cls: 'smart-vault-contribution-container' });
@@ -71,7 +71,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Ollama endpoint')
             .setDesc('URL of your Ollama server (e.g., http://localhost:11434)')
             .addText(text => text
-                .setPlaceholder('http://localhost:11434')
+                .setPlaceholder('Http://localhost:11434')
                 .setValue(this.plugin.settings.ollamaEndpoint)
                 .onChange(async (value) => {
                     this.plugin.settings.ollamaEndpoint = value;
@@ -82,7 +82,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
             .setName('Chat model')
             .setDesc('Ollama model to use for chat (e.g., llama3.1, mistral)')
             .addText(text => text
-                .setPlaceholder('llama3.1')
+                .setPlaceholder('Llama3.1')
                 .setValue(this.plugin.settings.chatModel)
                 .onChange(async (value) => {
                     this.plugin.settings.chatModel = value;
@@ -91,7 +91,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Embedding model')
-            .setDesc('Ollama model for vector embeddings (e.g., bge-m3, nomic-embed-text). requires re-scan if changed!')
+            .setDesc('Ollama model for vector embeddings (e.g., bge-m3, nomic-embed-text). Requires re-scan if changed!')
             .addText(text => text
                 .setPlaceholder('bge-m3')
                 .setValue(this.plugin.settings.embeddingModel)
@@ -174,7 +174,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Vault mode threshold')
-            .setDesc('Minimum similarity (0-1) to include a note in "vault" chats. lower = more context (0.5 recommended).')
+            .setDesc('Minimum similarity (0-1) to include a note in "vault" chats. Lower = more context (0.5 recommended).')
             .addSlider(slider => slider
                 .setLimits(0.1, 1.0, 0.05)
                 .setValue(this.plugin.settings.ragThresholdVault)
@@ -186,7 +186,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('General mode threshold')
-            .setDesc('Minimum similarity (0-1) to include a note in "general" chats. higher = less noise (0.85 recommended).')
+            .setDesc('Minimum similarity (0-1) to include a note in "general" chats. Higher = less noise (0.85 recommended).')
             .addSlider(slider => slider
                 .setLimits(0.1, 1.0, 0.05)
                 .setValue(this.plugin.settings.ragThresholdGeneral)
@@ -199,7 +199,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         // LLM Reranking Section
         new Setting(containerEl)
             .setHeading()
-            .setName('LLM-enhanced suggestions');
+            .setName('Llm-enhanced suggestions');
         containerEl.createEl('p', {
             text: 'Use a larger language model like qwen2.5:7b to intelligently rerank and explain link suggestions.',
             cls: 'setting-item-description'
@@ -242,7 +242,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Chat model')
-            .setDesc('Model for "Smart chat" (recommended: ministral-3:3b)')
+            .setDesc('Model for "smart chat" (recommended: ministral-3:3b)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.chatModel)
@@ -253,7 +253,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Formatting model')
-            .setDesc('Model for "Smart formatting" (recommended: ministral-3:3b)')
+            .setDesc('Model for "smart formatting" (recommended: ministral-3:3b)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.formattingModel)
@@ -264,7 +264,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Organization model')
-            .setDesc('Model for "Smart organization" (ministral-3:3b works well)')
+            .setDesc('Model for "smart organization" (ministral-3:3b works well)')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.organizationModel)
@@ -300,7 +300,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Enable hover previews')
-            .setDesc('Show live previews of suggestions on hover (for links, grammar, etc.). default: on.')
+            .setDesc('Show live previews of suggestions on hover (for links, grammar, etc.). Default: on.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableHoverPreviews)
                 .onChange(async (value) => {
@@ -322,7 +322,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Enable Smart insertion')
+            .setName('Enable smart insertion')
             .setDesc('Use LLM to find the best place to insert links (experimental)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableSmartInsertion)
@@ -387,7 +387,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         new Setting(containerEl)
         new Setting(containerEl)
             .setName('Vision model')
-            .setDesc('Model for handwritten notes (OCR). recommended: "ministral-3:3b" (fast/default), "ministral-3:8b" (better), or "qwen3-vl:7b" (best math). avoid "reasoning" models like r1.')
+            .setDesc('Model for handwritten notes (OCR). Recommended: "ministral-3:3b" (fast/default), "ministral-3:8b" (better), or "qwen3-vl:7b" (best math). Avoid "reasoning" models like r1.')
             .addText(text => text
                 .setPlaceholder('ministral-3:3b')
                 .setValue(this.plugin.settings.visionModel)
@@ -398,9 +398,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Handwritten inbox')
-            .setDesc('Folder to watch for images/PDFs (relative to vault root)')
+            .setDesc('Folder to watch for images/pdfs (relative to vault root)')
             .addText(text => text
-                .setPlaceholder('Inbox/Handwritten')
+                .setPlaceholder('Inbox/handwritten')
                 .setValue(this.plugin.settings.handwrittenInbox)
                 .onChange(async (value) => {
                     this.plugin.settings.handwrittenInbox = value;
@@ -420,9 +420,9 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Attachments folder')
-            .setDesc('Where to move the original handwritten images/PDFs after processing')
+            .setDesc('Where to move the original handwritten images/pdfs after processing')
             .addText(text => text
-                .setPlaceholder('Attachments/Handwritten')
+                .setPlaceholder('Attachments/handwritten')
                 .setValue(this.plugin.settings.handwrittenAttachmentsFolder)
                 .onChange(async (value) => {
                     this.plugin.settings.handwrittenAttachmentsFolder = value;
@@ -435,7 +435,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Cache directory')
-            .setDesc('Folder where cache files are stored (default: _smartvault). requires restart to take effect.')
+            .setDesc('Folder where cache files are stored (default: _smartvault). Requires restart to take effect.')
             .addText(text => text
                 .setPlaceholder('_smartvault')
                 .setValue(this.plugin.settings.cacheDirectory)
@@ -466,7 +466,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Export vector cache')
-            .setDesc('Export embeddings to JSON for backup or debugging (saves to "smart-vault-export.json" in root)')
+            .setDesc('Export embeddings to json for backup or debugging (saves to "smart-vault-export.json" in root)')
             .addButton(button => button
                 .setButtonText('Export cache')
                 .onClick(async () => {
@@ -485,7 +485,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Import vector cache')
-            .setDesc('Restore embeddings from "smart-vault-export.json". warning: overwrites current in-memory cache!')
+            .setDesc('Restore embeddings from "smart-vault-export.json". Warning: overwrites current in-memory cache!')
             .addButton(button => button
                 .setButtonText('Import cache')
                 .setWarning()

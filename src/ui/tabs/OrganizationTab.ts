@@ -59,7 +59,7 @@ export class OrganizationTab extends BaseTab {
 
         if (this.isLoading) {
             outputArea.empty();
-            outputArea.createEl('div', { cls: 'smart-vault-loading', text: '📂 Analyzing vault structure... (switch tabs freely)' });
+            outputArea.createEl('div', { cls: 'smart-vault-loading', text: '📂 analyzing vault structure... (switch tabs freely)' });
         } else if (this.currentFile && this.lastResult && this.lastResultPath === this.currentFile.path) {
             this.renderResult(outputArea, this.lastResult, this.currentFile);
         }
@@ -236,7 +236,7 @@ export class OrganizationTab extends BaseTab {
             const card = item.createDiv({ cls: 'suggestion-card' });
 
             const header = card.createDiv({ cls: 'suggestion-header' });
-            header.createEl('span', { text: '📁 Suggested folder:', cls: 'suggestion-label' });
+            header.createEl('span', { text: '📁 suggested folder:', cls: 'suggestion-label' });
             header.createEl('code', { text: suggestion.folder, cls: 'suggestion-value' });
 
             const confidence = card.createDiv({ cls: 'suggestion-confidence' });

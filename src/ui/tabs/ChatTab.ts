@@ -110,9 +110,9 @@ export class ChatTab extends BaseTab {
 
         // Mode Toggle GROUP
         const modeSelect = controlsRow.createEl('select', { cls: 'dropdown smart-vault-mode-select' });
-        modeSelect.createEl('option', { value: 'strict', text: '🛡️ Strict' });
-        modeSelect.createEl('option', { value: 'vault', text: '🌍 Vault' });
-        modeSelect.createEl('option', { value: 'general', text: '🧠 General' });
+        modeSelect.createEl('option', { value: 'strict', text: '🛡️ strict' });
+        modeSelect.createEl('option', { value: 'vault', text: '🌍 vault' });
+        modeSelect.createEl('option', { value: 'general', text: '🧠 general' });
         modeSelect.value = this.chatMode;
         modeSelect.onchange = () => {
             this.chatMode = modeSelect.value as 'strict' | 'vault' | 'general';
@@ -120,7 +120,7 @@ export class ChatTab extends BaseTab {
         };
 
         // New Chat Button
-        const newChatBtn = controlsRow.createEl('button', { text: '✨ New chat', cls: 'smart-vault-mini-btn smart-vault-new-chat-btn' });
+        const newChatBtn = controlsRow.createEl('button', { text: '✨ new chat', cls: 'smart-vault-mini-btn smart-vault-new-chat-btn' });
         newChatBtn.onclick = () => {
             this.history = [];
             this.contextDetached = false;
@@ -221,7 +221,7 @@ export class ChatTab extends BaseTab {
                     async (confirmed) => {
                         if (confirmed && this.plugin.cacheManager) {
                             await this.plugin.cacheManager.deleteChatHistory(filePath);
-                            this.renderHistoryView(container); // Re-render
+                            await this.renderHistoryView(container); // Re-render
                         }
                     },
                     'Delete'

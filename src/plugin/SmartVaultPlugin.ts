@@ -79,7 +79,7 @@ export default class SmartVaultPlugin extends Plugin {
 
         this.registerEditorExtension(inlineSuggestionExtension(this.app, this));
 
-        this.addRibbonIcon('brain', 'Smart vault suggestions', () => {
+        this.addRibbonIcon('brain', 'Smart Vault suggestions', () => {
             void this.activateSuggestionView();
         });
 
@@ -151,7 +151,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (selection) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart vault: suggest grammar corrections')
+                            .setTitle('Smart Vault: suggest grammar corrections')
                             .setIcon('spell-check')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -170,7 +170,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (file instanceof TFile) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart vault: chat with this note')
+                            .setTitle('Smart Vault: chat with this note')
                             .setIcon('message-square')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -182,7 +182,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart vault: summarize this note')
+                            .setTitle('Smart Vault: summarize this note')
                             .setIcon('file-text')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -194,7 +194,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart vault: generate outline')
+                            .setTitle('Smart Vault: generate outline')
                             .setIcon('list')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -205,7 +205,7 @@ export default class SmartVaultPlugin extends Plugin {
                     });
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart vault: transcribe pdf (force)')
+                            .setTitle('Smart Vault: transcribe PDF (force)')
                             .setIcon('file-audio')
                             .onClick(async () => {
                                 if (file.extension === 'pdf' && this.handwrittenWatcher) {
@@ -271,12 +271,12 @@ export default class SmartVaultPlugin extends Plugin {
 
         // Watch for file modifications to invalidate caches
         this.registerEvent(
-            this.app.vault.on('modify', async (file) => {
+            this.app.vault.on('modify', (file) => {
                 if (file instanceof TFile && file.extension === 'md') {
                     if (this.settings.debugMode) {
                         console.debug(`[DEBUG] File modified: ${file.path}`);
                     }
-                    await this.onFileModified(file);
+                    this.onFileModified(file);
                 }
             })
         );
@@ -704,7 +704,7 @@ export default class SmartVaultPlugin extends Plugin {
             }
 
             // Save updated caches
-            await this.saveEmbeddings();
+            this.saveEmbeddings();
             await this.saveKeywords();
             await this.saveSuggestions();
 
@@ -834,7 +834,7 @@ export default class SmartVaultPlugin extends Plugin {
         try {
             const suggestions = await this.fileProcessor!.refreshDocument(
                 file,
-                async () => { this.saveEmbeddings(); }
+                () => { this.saveEmbeddings(); return Promise.resolve(); }
             );
 
             notice.hide();
@@ -1094,7 +1094,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (!['png', 'jpg', 'jpeg', 'webp'].includes(imageFile.extension.toLowerCase())) {
-            new Notice('Only png, jpg, and webp images are supported.');
+            new Notice('Only PNG, JPG, and WebP images are supported.');
             return;
         }
 

@@ -43,7 +43,7 @@ export class HandwrittenNoteWatcher {
         // Register DEBUG command
         this.plugin.addCommand({
             id: 'debug-current-handwritten-file',
-            name: 'Debug: Process current file (vision)',
+            name: 'Debug: process current file (vision)',
             checkCallback: (checking: boolean) => {
                 const file = this.plugin.app.workspace.getActiveFile();
                 if (file && ['png', 'jpg', 'jpeg', 'webp', 'pdf'].includes(file.extension.toLowerCase())) {
@@ -179,7 +179,7 @@ export class HandwrittenNoteWatcher {
 
             // Handle PDF vs Image
             if (currentFile.extension.toLowerCase() === 'pdf') {
-                new Notice(`📄 Converting pdf key pages...`);
+                new Notice("📄 converting PDF key pages...");
                 imagesBase64 = await this.convertPdfToImages(currentFile);
             } else {
                 const arrayBuffer = await this.plugin.app.vault.readBinary(currentFile);
