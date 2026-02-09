@@ -205,14 +205,14 @@ export default class SmartVaultPlugin extends Plugin {
                     });
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart vault: transcribe pdf (force)')
+                            .setTitle('Smart vault: transcribe PDF (force)')
                             .setIcon('file-audio')
                             .onClick(async () => {
                                 if (file.extension === 'pdf' && this.handwrittenWatcher) {
                                     new Notice(`Force transcribing ${file.basename}...`);
                                     await this.handwrittenWatcher.forceTranscribe(file);
                                 } else {
-                                    new Notice("Not a pdf or watcher not initialized.");
+                                    new Notice("Not a PDF or watcher not initialized.");
                                 }
                             });
                     });
@@ -1094,7 +1094,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (!['png', 'jpg', 'jpeg', 'webp'].includes(imageFile.extension.toLowerCase())) {
-            new Notice('Only png, jpg, and webp images are supported.');
+            new Notice('Only PNG, JPG, and WEBP images are supported.');
             return;
         }
 

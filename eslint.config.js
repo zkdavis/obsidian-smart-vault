@@ -29,7 +29,7 @@ export default defineConfig([
                 "warn",
                 {
                     brands: [],
-                    acronyms: [],
+                    acronyms: ["AI", "LLM", "HTTP", "PDF", "OCR", "JSON", "URL", "ID", "CPU", "RAM", "API", "UI", "Markdown", "PNG", "JPG", "JPEG", "WEBP"],
                     enforceCamelCaseLower: true,
                     allowAutoFix: true,
                 },

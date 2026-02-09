@@ -179,7 +179,7 @@ export class HandwrittenNoteWatcher {
 
             // Handle PDF vs Image
             if (currentFile.extension.toLowerCase() === 'pdf') {
-                new Notice("📄 converting pdf key pages...");
+                new Notice("📄 converting PDF key pages...");
                 imagesBase64 = await this.convertPdfToImages(currentFile);
             } else {
                 const arrayBuffer = await this.plugin.app.vault.readBinary(currentFile);

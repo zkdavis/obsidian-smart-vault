@@ -295,9 +295,9 @@ export class LinkSuggestionView extends ItemView {
             // "Rerank AI" Button (Only if LLM Reranking is Enabled)
             if (this.plugin.settings.useLLMReranking) {
                 const rerankBtn = actionsDiv.createEl('button', {
-                    text: '✨ ai',
+                    text: '✨ AI',
                     cls: 'suggestion-button suggestion-mini-btn',
-                    attr: { title: 'Manually trigger llm reranking' }
+                    attr: { title: 'Manually trigger LLM reranking' }
                 });
                 rerankBtn.onclick = () => {
                     void (async () => {
@@ -316,7 +316,7 @@ export class LinkSuggestionView extends ItemView {
                             new Notice("Manual rerank failed: " + e);
                         } finally {
                             rerankBtn.disabled = false;
-                            rerankBtn.textContent = '✨ ai';
+                            rerankBtn.textContent = '✨ AI';
                         }
                     })();
                 };
@@ -498,7 +498,7 @@ export class LinkSuggestionView extends ItemView {
                 if (hasLLMSuggestions && !shownEmbeddingDivider && suggestion.llm_score === undefined) {
                     shownEmbeddingDivider = true;
                     const divider = list.createEl('div', { cls: 'embedding-only-divider' });
-                    divider.createEl('span', { text: '📊 embedding-only suggestions (not ai-ranked)' });
+                    divider.createEl('span', { text: '📊 embedding-only suggestions (not AI-ranked)' });
                 }
 
                 this.renderSuggestionItem(list, suggestion, this.currentFile!);
