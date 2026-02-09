@@ -137,7 +137,7 @@ export class OrganizationTab extends BaseTab {
                     result = JSON.parse(clean);
                 } catch (e) {
                     console.error("Failed to parse organization JSON", e);
-                    new Notice("Failed to parse AI response. Check console for details.");
+                    new Notice("Failed to parse ai response. Check console for details.");
                 }
             } else {
                 if (this.plugin.settings.debugMode) console.debug(`[DEBUG] Received object result:`, result);

@@ -79,7 +79,7 @@ export default class SmartVaultPlugin extends Plugin {
 
         this.registerEditorExtension(inlineSuggestionExtension(this.app, this));
 
-        this.addRibbonIcon('brain', 'Smart Vault suggestions', () => {
+        this.addRibbonIcon('brain', 'Smart vault suggestions', () => {
             void this.activateSuggestionView();
         });
 
@@ -151,7 +151,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (selection) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: suggest grammar corrections')
+                            .setTitle('Smart vault: suggest grammar corrections')
                             .setIcon('spell-check')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -170,7 +170,7 @@ export default class SmartVaultPlugin extends Plugin {
                 if (file instanceof TFile) {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: chat with this note')
+                            .setTitle('Smart vault: chat with this note')
                             .setIcon('message-square')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -182,7 +182,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: summarize this note')
+                            .setTitle('Smart vault: summarize this note')
                             .setIcon('file-text')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -194,7 +194,7 @@ export default class SmartVaultPlugin extends Plugin {
 
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: generate outline')
+                            .setTitle('Smart vault: generate outline')
                             .setIcon('list')
                             .onClick(async () => {
                                 await this.activateSuggestionView();
@@ -205,14 +205,14 @@ export default class SmartVaultPlugin extends Plugin {
                     });
                     menu.addItem((item) => {
                         item
-                            .setTitle('Smart Vault: transcribe PDF (force)')
+                            .setTitle('Smart vault: transcribe pdf (force)')
                             .setIcon('file-audio')
                             .onClick(async () => {
                                 if (file.extension === 'pdf' && this.handwrittenWatcher) {
                                     new Notice(`Force transcribing ${file.basename}...`);
                                     await this.handwrittenWatcher.forceTranscribe(file);
                                 } else {
-                                    new Notice(`Not a PDF or watcher not initialized.`);
+                                    new Notice("Not a pdf or watcher not initialized.");
                                 }
                             });
                     });
@@ -1094,7 +1094,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (!['png', 'jpg', 'jpeg', 'webp'].includes(imageFile.extension.toLowerCase())) {
-            new Notice('Only PNG, JPG, and WebP images are supported.');
+            new Notice('Only png, jpg, and webp images are supported.');
             return;
         }
 

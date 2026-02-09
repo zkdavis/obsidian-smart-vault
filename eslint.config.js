@@ -1,8 +1,9 @@
+import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 
-export default tseslint.config(
+export default defineConfig([
     {
         files: ["**/*.ts"],
         plugins: {
@@ -27,8 +28,8 @@ export default tseslint.config(
             "obsidianmd/ui/sentence-case": [
                 "warn",
                 {
-                    brands: ["Smart Vault", "Ollama", "GitHub", "ministral", "llama", "qwen", "bge", "nomic", "WebP"],
-                    acronyms: ["PDF", "LLM", "RAG", "WASM", "CPU", "URL", "ID", "MOC", "OCR", "PNG", "JPG", "AI"],
+                    brands: [],
+                    acronyms: [],
                     enforceCamelCaseLower: true,
                     allowAutoFix: true,
                 },
@@ -44,4 +45,4 @@ export default tseslint.config(
             "@typescript-eslint/no-floating-promises": "error",
         },
     },
-);
+]);
