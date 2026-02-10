@@ -12,7 +12,7 @@ node_modules/
 # yarn.lock
 
 # Obsidian
-# main.js
+main.js
 
 *.js.map
 
