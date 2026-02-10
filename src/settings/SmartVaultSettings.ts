@@ -206,8 +206,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         });
 
         new Setting(containerEl)
-            .setName('Enable LLM reranking')
-            .setDesc('Use an LLM to rerank suggestions with intelligent reasoning (slower but smarter)')
+            .setName('Enable llm reranking')
+            .setDesc('Use an llm to rerank suggestions with intelligent reasoning (slower but smarter)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.useLLMReranking)
                 .onChange(async (value) => {
@@ -217,7 +217,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Manual rerank only')
-            .setDesc('Only run LLM reranking when the "✨ rerank with AI" button is clicked (skips automatic background reranking)')
+            .setDesc('Only run llm reranking when the "✨ rerank with AI" button is clicked (skips automatic background reranking)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.manualLLMRerank)
                 .onChange(async (value) => {
@@ -226,7 +226,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM model')
+            .setName('Llm model')
             .setDesc('Ollama model for reranking (e.g., ministral-3:3b, qwen2.5:7b)')
             .addText(text => text
                 .setPlaceholder('Ministral-3:3b')
@@ -275,8 +275,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
 
         new Setting(containerEl)
-            .setName('LLM candidate count')
-            .setDesc('How many top embedding results to send to LLM for reranking')
+            .setName('Llm candidate count')
+            .setDesc('How many top embedding results to send to llm for reranking')
             .addSlider(slider => slider
                 .setLimits(1, 20, 1)
                 .setValue(this.plugin.settings.llmCandidateCount)
@@ -287,8 +287,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM temperature')
-            .setDesc('Creativity of LLM reasoning (0.0 = precise, 1.0 = creative)')
+            .setName('Llm temperature')
+            .setDesc('Creativity of llm reasoning (0.0 = precise, 1.0 = creative)')
             .addSlider(slider => slider
                 .setLimits(0, 1, 0.1)
                 .setValue(this.plugin.settings.llmTemperature)
@@ -323,7 +323,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Enable smart insertion')
-            .setDesc('Use LLM to find the best place to insert links (experimental)')
+            .setDesc('Use llm to find the best place to insert links (experimental)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableSmartInsertion)
                 .onChange(async (value) => {
@@ -332,7 +332,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM concurrency')
+            .setName('Llm concurrency')
             .setDesc('Number of files to process in parallel during vault scan (higher = faster but more CPU/memory)')
             .addSlider(slider => slider
                 .setLimits(1, 10, 1)
@@ -344,8 +344,8 @@ export class SmartVaultSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('LLM timeout (seconds)')
-            .setDesc('How long to wait for LLM response before timing out (increase if you have a slow model)')
+            .setName('Llm timeout (seconds)')
+            .setDesc('How long to wait for llm response before timing out (increase if you have a slow model)')
             .addSlider(slider => slider
                 .setLimits(10, 120, 5)
                 .setValue(this.plugin.settings.llmTimeout / 1000)  // Convert ms to seconds for display
@@ -357,7 +357,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Extract keywords')
-            .setDesc('Use LLM to extract keywords from documents for better cross-linking (slightly slower scan)')
+            .setDesc('Use llm to extract keywords from documents for better cross-linking (slightly slower scan)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.useKeywordExtraction)
                 .onChange(async (value) => {
@@ -387,7 +387,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
         new Setting(containerEl)
         new Setting(containerEl)
             .setName('Vision model')
-            .setDesc('Model for handwritten notes (OCR). Recommended: "ministral-3:3b" (fast/default), "ministral-3:8b" (better), or "qwen3-vl:7b" (best math). Avoid "reasoning" models like r1.')
+            .setDesc('Model for handwritten notes (ocr). Recommended: "ministral-3:3b" (fast/default), "ministral-3:8b" (better), or "qwen3-vl:7b" (best math). Avoid "reasoning" models like r1.')
             .addText(text => text
                 .setPlaceholder('Ministral-3:3b')
                 .setValue(this.plugin.settings.visionModel)
@@ -409,7 +409,7 @@ export class SmartVaultSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Transcript folder')
-            .setDesc('Where to save the transcribed MARKDOWN notes')
+            .setDesc('Where to save the transcribed Markdown notes')
             .addText(text => text
                 .setPlaceholder('Inbox')
                 .setValue(this.plugin.settings.transcriptFolder)

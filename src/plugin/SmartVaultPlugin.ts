@@ -1094,7 +1094,7 @@ export default class SmartVaultPlugin extends Plugin {
         }
 
         if (!['png', 'jpg', 'jpeg', 'webp'].includes(imageFile.extension.toLowerCase())) {
-            new Notice('Only PNG, JPG, and WEBP images are supported.');
+            new Notice('Only PNG, JPG, and webp images are supported.');
             return;
         }
 

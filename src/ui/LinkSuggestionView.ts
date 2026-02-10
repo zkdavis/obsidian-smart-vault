@@ -297,7 +297,7 @@ export class LinkSuggestionView extends ItemView {
                 const rerankBtn = actionsDiv.createEl('button', {
                     text: '✨ AI',
                     cls: 'suggestion-button suggestion-mini-btn',
-                    attr: { title: 'Manually trigger LLM reranking' }
+                    attr: { title: 'Manually trigger llm reranking' }
                 });
                 rerankBtn.onclick = () => {
                     void (async () => {

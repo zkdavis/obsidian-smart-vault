@@ -26,11 +26,8 @@ export default defineConfig([
 
             // 1. Use sentence case for UI text
             "obsidianmd/ui/sentence-case": [
-                "warn",
+                "error",
                 {
-                    brands: [],
-                    acronyms: ["AI", "LLM", "HTTP", "PDF", "OCR", "JSON", "URL", "ID", "CPU", "RAM", "API", "UI", "Markdown", "PNG", "JPG", "JPEG", "WEBP"],
-                    enforceCamelCaseLower: true,
                     allowAutoFix: true,
                 },
             ],
